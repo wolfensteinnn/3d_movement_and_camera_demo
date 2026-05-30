@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://i6is6qwpdwec"]
+
+[ext_resource type="Script" uid="uid://cdlm58766lwio" path="res://scripts/multiplayer.gd" id="1_0wfyh"]
+[ext_resource type="PackedScene" uid="uid://6jb3nmk336sq" path="res://scenes/player.tscn" id="1_o5qli"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_0wfyh"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_sugp2"]
+size = Vector3(200, 0, 200)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_jyhfs"]
+size = Vector2(200, 200)
+
+[sub_resource type="BoxMesh" id="BoxMesh_0wfyh"]
+size = Vector3(20, 1, 1)
+
+[node name="Node3D" type="Node3D" unique_id=1848200090]
+script = ExtResource("1_0wfyh")
+player_scene = ExtResource("1_o5qli")
+
+[node name="Button" type="Button" parent="." unique_id=2133136404]
+offset_right = 55.0
+offset_bottom = 8.0
+text = "HOST"
+
+[node name="Button2" type="Button" parent="." unique_id=1602238571]
+offset_top = 132.0
+offset_right = 101.0
+offset_bottom = 184.0
+text = "join
+"
+
+[node name="LineEdit" type="LineEdit" parent="." unique_id=2140844011]
+offset_top = 190.0
+offset_right = 205.0
+offset_bottom = 221.0
+text = "lobby_id"
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=313399509]
+_spawnable_scenes = PackedStringArray("uid://6jb3nmk336sq")
+spawn_path = NodePath("..")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=1720493028]
+physics_material_override = SubResource("PhysicsMaterial_0wfyh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" unique_id=1688031243]
+shape = SubResource("BoxShape3D_sugp2")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D" unique_id=1629425242]
+mesh = SubResource("PlaneMesh_jyhfs")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1746640217]
+transform = Transform3D(1, 0, 0, 0, 0.17483404, 0.9845979, 0, -0.9845979, 0.17483404, 0, 15.040015, 0)
+light_color = Color(0.8839264, 0.92312306, 1, 1)
+light_energy = 0.296
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2009538088]
+transform = Transform3D(0.9907336, 0, 0.13581935, 0, 1, 0, -0.13581935, 0, 0.9907336, 1.4833508, 0.16935301, 2.5352478)
+mesh = SubResource("BoxMesh_0wfyh")
+
+[node name="SpotLight3D" type="SpotLight3D" parent="." unique_id=1664564364]
+transform = Transform3D(1, 0, 0, 0, -0.615689, 0.78798926, 0, -0.78798926, -0.615689, -0.012156963, 3.2380342, -2.6588404)
+light_color = Color(1, 0.7209147, 0.62068284, 1)
+light_energy = 14.167
+spot_range = 6.56012
+spot_angle = 39.374996
+
+[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]
