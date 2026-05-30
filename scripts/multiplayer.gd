@@ -13,7 +13,6 @@ var is_joining: bool = false
 @onready var button_2: Button = $Button2
 @onready var multiplayer_spawner: MultiplayerSpawner = $MultiplayerSpawner
 
-
 # -------------------------------------------------------
 # LIFECYCLE
 # -------------------------------------------------------

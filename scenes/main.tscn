@@ -12,8 +12,11 @@ size = Vector3(60, 0, 60)
 [sub_resource type="PlaneMesh" id="PlaneMesh_jyhfs"]
 size = Vector2(60, 60)
 
-[sub_resource type="BoxMesh" id="BoxMesh_0wfyh"]
-size = Vector3(20, 1, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sugp2"]
+bg_color = Color(0.14509805, 0.22352941, 0.03137255, 0.25882354)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jyhfs"]
+bg_color = Color(0.15294118, 0.72156864, 0.15294118, 0.6666667)
 
 [node name="Node3D" type="Node3D" unique_id=1848200090]
 script = ExtResource("1_0wfyh")
@@ -39,6 +42,7 @@ text = "join
 "
 
 [node name="LineEdit" type="LineEdit" parent="." unique_id=2140844011]
+visible = false
 offset_top = 190.0
 offset_right = 205.0
 offset_bottom = 221.0
@@ -64,16 +68,27 @@ transform = Transform3D(1, 0, 0, 0, 0.17483404, 0.9845979, 0, -0.9845979, 0.1748
 light_color = Color(0.8839264, 0.92312306, 1, 1)
 light_energy = 0.296
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2009538088]
-transform = Transform3D(0.9907336, 0, 0.13581935, 0, 1, 0, -0.13581935, 0, 0.9907336, 1.4833508, 0.16935301, 2.5352478)
-mesh = SubResource("BoxMesh_0wfyh")
-
 [node name="SpotLight3D" type="SpotLight3D" parent="." unique_id=1664564364]
 transform = Transform3D(1, 0, 0, 0, -0.615689, 0.78798926, 0, -0.78798926, -0.615689, -0.012156963, 3.2380342, -2.6588404)
 light_color = Color(1, 0.7209147, 0.62068284, 1)
 light_energy = 14.167
 spot_range = 6.56012
 spot_angle = 39.374996
+
+[node name="StaminaBar" type="ProgressBar" parent="." unique_id=2111663213]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.911
+anchor_right = 0.5
+anchor_bottom = 0.911
+offset_left = -136.5
+offset_top = -27.0
+offset_right = 136.5
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/background = SubResource("StyleBoxFlat_sugp2")
+theme_override_styles/fill = SubResource("StyleBoxFlat_jyhfs")
+show_percentage = false
 
 [connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]

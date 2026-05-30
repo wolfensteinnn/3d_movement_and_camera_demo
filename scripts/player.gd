@@ -1,9 +1,12 @@
 extends CharacterBody3D
 @onready var camera_mount: Node3D = $CameraMount
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
-@onready var meshes: Node3D = $duckduck/meshes
+@onready var meshes: Skeleton3D = $duckAllAnims/Armature/Skeleton3D
 
 var debug_velocity
+
+#UI
+var stamina_bar
 
 #FOR CUSTOM MULTIPLAYER SPAWNING
 var is_master: bool
@@ -12,6 +15,15 @@ var initial_transform: Vector3
 # MOVEMENT AND PHYSICS
 var SPEED = 1.65
 var ACCELERATION = 10.0
+
+# STAMINA
+const STAMINA_MAX = 100.0
+const STAMINA_REGEN_RATE = 12.0        # per second
+const STAMINA_REGEN_DELAY = 1.4        # seconds after last use before regen starts
+const STAMINA_JUMP_COST = 30.0
+const STAMINA_MOMENTUM_BOOST_EMPTY = 1.08  # weaker boost when out of stamina
+var stamina: float = 100.0
+var stamina_regen_timer: float = 0.0
 
 # GRAVITY
 const GRAVITY_UP = -7.0
@@ -48,6 +60,10 @@ var bob_time: float = 0.0
 var target_rotation_y: float = 0.0
 var target_rotation_x: float = 0.0
 
+#THIS FUNCTION IS USED FOR REFERENCING THE STAMINA BAR WHEN WE CREATE THIS SCENE FROM THE OUTSIDE
+func _set_stamina_bar(a_bar): 
+	stamina_bar = a_bar
+
 func _set_debug_velocityLabel(a_label):
 	debug_velocity = a_label
 
@@ -57,6 +73,7 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	
 	velocity = Vector3.ZERO
+	
 	if is_multiplayer_authority():
 		global_position = initial_transform
 		camera_main.current = true
@@ -90,6 +107,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	
 	if event.is_action_pressed("jump"):
 		jump_buffer_timer = JUMP_BUFFER_TIME
+
+func _update_stamina(delta: float) -> void:
+	if stamina_regen_timer > 0.0:
+		stamina_regen_timer -= delta
+	else:
+		stamina = min(stamina + STAMINA_REGEN_RATE * delta, STAMINA_MAX)
+	if is_instance_valid(stamina_bar):
+		stamina_bar.value = max(stamina,0)
+	print(stamina)
 
 func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
@@ -128,11 +154,17 @@ func _physics_process(delta: float) -> void:
 	# Jump
 	if jump_buffer_timer > 0.0 and jump_grace_timer > 0.0:
 		velocity.y = JUMP_VELOCITY
-		velocity.x *= JUMP_MOMENTUM_BOOST
-		velocity.z *= JUMP_MOMENTUM_BOOST
+		if stamina >= STAMINA_JUMP_COST:
+			stamina = max(stamina - STAMINA_JUMP_COST, 0.0)
+			velocity.x *= JUMP_MOMENTUM_BOOST
+			velocity.z *= JUMP_MOMENTUM_BOOST
+		else:
+			stamina = max(stamina - STAMINA_JUMP_COST, 0.0)
+			velocity.x *= STAMINA_MOMENTUM_BOOST_EMPTY
+			velocity.z *= STAMINA_MOMENTUM_BOOST_EMPTY
+		stamina_regen_timer = STAMINA_REGEN_DELAY
 		jump_grace_timer = 0.0
 		jump_buffer_timer = 0.0
-
 
 	# Movement
 	var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -147,6 +179,7 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	_update_bob(delta)
+	_update_stamina(delta)
 
 func _update_bob(delta: float) -> void:
 	var horizontal_speed = Vector2(velocity.x, velocity.z).length()
