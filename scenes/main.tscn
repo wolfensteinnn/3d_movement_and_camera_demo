@@ -90,5 +90,15 @@ theme_override_styles/background = SubResource("StyleBoxFlat_sugp2")
 theme_override_styles/fill = SubResource("StyleBoxFlat_jyhfs")
 show_percentage = false
 
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=2095626286]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.7752075, 2.4536743, 0)
+use_collision = true
+size = Vector3(10.060181, 5.9073486, 1)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="." unique_id=834979143]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.167106, 1.2830682, -6.540642)
+use_collision = true
+size = Vector3(1, 2.753418, 1)
+
 [connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]
