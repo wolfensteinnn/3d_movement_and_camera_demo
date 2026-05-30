@@ -16,29 +16,36 @@ var initial_transform: Vector3
 var SPEED = 1.65
 var ACCELERATION = 10.0
 
+#SPRINT
+const SPRINT_SPEED = 2.6
+const SPRINT_AIR_ACCELERATION = 0.8
+const STAMINA_SPRINT_COST = 18.0
+var is_sprinting: bool = false
+var jumped_while_sprinting: bool = false
+
 # STAMINA
 const STAMINA_MAX = 100.0
-const STAMINA_REGEN_RATE = 12.0        # per second
-const STAMINA_REGEN_DELAY = 1.4        # seconds after last use before regen starts
+const STAMINA_REGEN_RATE = 12.0
+const STAMINA_REGEN_DELAY = 1.4
 const STAMINA_JUMP_COST = 30.0
-const STAMINA_MOMENTUM_BOOST_EMPTY = 1.08  # weaker boost when out of stamina
+const STAMINA_MOMENTUM_BOOST_EMPTY = 1.08
 var stamina: float = 100.0
 var stamina_regen_timer: float = 0.0
 
 # GRAVITY
 const GRAVITY_UP = -7.0
 const GRAVITY_DOWN = -16.0
-const GRAVITY_PEAK_THRESHOLD = 1.2  # velocity range considered "at the peak" - SHOULD BE AROUND 70% +- IMO of JUMP_VELOCITY
-const GRAVITY_PEAK_MULTIPLIER = 0.4  # how floaty the peak feels
+const GRAVITY_PEAK_THRESHOLD = 1.0
+const GRAVITY_PEAK_MULTIPLIER = 0.4
 
 #JUMP
 const JUMP_VELOCITY = 1.78
-const JUMP_GRACE_TIME = 0.07 #ITS JUST A GUARDRAIL AGAINST ON_THE_FLOOR FRAME INCOSISTENCIES
-const JUMP_BUFFER_TIME = 0.12 #ALLOWS US TO MAKE JUMPS SLIGHTLY BEFORE WE TOUCH THE GROUND - FEELS GOOD (FORGIVING)
+const JUMP_GRACE_TIME = 0.07
+const JUMP_BUFFER_TIME = 0.12
 var jump_grace_timer: float = 0.0
 var jump_buffer_timer: float = 0.0
 var AIR_ACCELERATION = 3.2
-const JUMP_MOMENTUM_BOOST = 1.36  # horizontal velocity multiplier on jump
+const JUMP_MOMENTUM_BOOST = 1.36
 
 # LANDING DIP
 const LANDING_DIP_STRENGTH = 0.06
@@ -60,8 +67,11 @@ var bob_time: float = 0.0
 var target_rotation_y: float = 0.0
 var target_rotation_x: float = 0.0
 
-#THIS FUNCTION IS USED FOR REFERENCING THE STAMINA BAR WHEN WE CREATE THIS SCENE FROM THE OUTSIDE
-func _set_stamina_bar(a_bar): 
+#ANIMATIONS
+@onready var animation_tree: AnimationTree = $duckAllAnims/AnimationTree
+
+
+func _set_stamina_bar(a_bar):
 	stamina_bar = a_bar
 
 func _set_debug_velocityLabel(a_label):
@@ -71,9 +81,7 @@ func _enter_tree() -> void:
 	set_multiplayer_authority(name.to_int())
 
 func _ready() -> void:
-	
 	velocity = Vector3.ZERO
-	
 	if is_multiplayer_authority():
 		global_position = initial_transform
 		camera_main.current = true
@@ -92,19 +100,15 @@ func _notification(what: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if !is_multiplayer_authority():
 		return
-		
-	#THIS IS PURELY FOR UNLOCKING A MOUSE (DEBUG FEATURE) I WILL DELETE IT LATER
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ESCAPE:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
-	
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
 	if event is InputEventMouseMotion:
 		target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
 		target_rotation_x += event.relative.y * MOUSE_SENSITIVITY
 		target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
-	
 	if event.is_action_pressed("jump"):
 		jump_buffer_timer = JUMP_BUFFER_TIME
 
@@ -114,16 +118,15 @@ func _update_stamina(delta: float) -> void:
 	else:
 		stamina = min(stamina + STAMINA_REGEN_RATE * delta, STAMINA_MAX)
 	if is_instance_valid(stamina_bar):
-		stamina_bar.value = max(stamina,0)
-	print(stamina)
+		stamina_bar.value = max(stamina, 0)
 
 func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
 		return
-	
+
 	if is_instance_valid(debug_velocity):
 		debug_velocity.text = "%.2f" % Vector2(velocity.x, velocity.z).length()
-	
+
 	rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
 	camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
 
@@ -134,26 +137,28 @@ func _physics_process(delta: float) -> void:
 		if velocity.y > GRAVITY_PEAK_THRESHOLD:
 			grav = GRAVITY_UP
 		elif velocity.y > -GRAVITY_PEAK_THRESHOLD:
-			grav = GRAVITY_UP * GRAVITY_PEAK_MULTIPLIER  # hang time at peak
+			grav = GRAVITY_UP * GRAVITY_PEAK_MULTIPLIER
 		else:
-			grav = GRAVITY_DOWN  # heavier fall
+			grav = GRAVITY_DOWN
 		velocity.y += grav * delta
 	else:
 		jump_grace_timer = JUMP_GRACE_TIME
 
-	#CAMERA DIP ON JUMPS
+	# Landing
 	var on_floor_now = is_on_floor()
 	if on_floor_now and not was_on_floor:
 		landing_dip = -LANDING_DIP_STRENGTH
+		jumped_while_sprinting = false
 	was_on_floor = on_floor_now
 
-	# Jump
+	# Jump buffer countdown
 	if jump_buffer_timer > 0.0:
 		jump_buffer_timer -= delta
 
 	# Jump
 	if jump_buffer_timer > 0.0 and jump_grace_timer > 0.0:
 		velocity.y = JUMP_VELOCITY
+		jumped_while_sprinting = is_sprinting
 		if stamina >= STAMINA_JUMP_COST:
 			stamina = max(stamina - STAMINA_JUMP_COST, 0.0)
 			velocity.x *= JUMP_MOMENTUM_BOOST
@@ -162,6 +167,8 @@ func _physics_process(delta: float) -> void:
 			stamina = max(stamina - STAMINA_JUMP_COST, 0.0)
 			velocity.x *= STAMINA_MOMENTUM_BOOST_EMPTY
 			velocity.z *= STAMINA_MOMENTUM_BOOST_EMPTY
+			velocity.x = clamp(velocity.x, -SPEED * 0.1, SPEED * 0.1) #PUNISH NO STAMINA JUMPS WITH A 0.1 SPEED MULTIPLIER
+			velocity.z = clamp(velocity.z, -SPEED * 0.1, SPEED * 0.1)
 		stamina_regen_timer = STAMINA_REGEN_DELAY
 		jump_grace_timer = 0.0
 		jump_buffer_timer = 0.0
@@ -169,10 +176,22 @@ func _physics_process(delta: float) -> void:
 	# Movement
 	var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction = (transform.basis * Vector3(-input.x, 0, -input.y)).normalized()
-	var accel = ACCELERATION if is_on_floor() else AIR_ACCELERATION
+
+	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0.0 and is_on_floor()
+	var current_speed = SPRINT_SPEED if is_sprinting else SPEED
+
+	if is_sprinting:
+		animation_tree.set("parameters/conditions/sprint",true)
+		stamina = max(stamina - STAMINA_SPRINT_COST * delta, 0.0)
+		stamina_regen_timer = STAMINA_REGEN_DELAY
+		
+
+	var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
+	var accel = ACCELERATION if is_on_floor() else current_air_accel
+
 	if direction:
-		velocity.x = move_toward(velocity.x, direction.x * SPEED, accel * delta)
-		velocity.z = move_toward(velocity.z, direction.z * SPEED, accel * delta)
+		velocity.x = move_toward(velocity.x, direction.x * current_speed, accel * delta)
+		velocity.z = move_toward(velocity.z, direction.z * current_speed, accel * delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0, accel * delta) if not is_on_floor() else 0
 		velocity.z = move_toward(velocity.z, 0, accel * delta) if not is_on_floor() else 0
@@ -193,7 +212,7 @@ func _update_bob(delta: float) -> void:
 	else:
 		camera_mount.position.y = lerp(camera_mount.position.y, 0.0, delta * 10.0)
 		camera_mount.position.x = lerp(camera_mount.position.x, 0.0, delta * 10.0)
-	
-	#CAMERA DIP
+
+	# Camera dip
 	landing_dip = lerp(landing_dip, 0.0, LANDING_DIP_SPEED * delta)
 	camera_mount.position.y += landing_dip
