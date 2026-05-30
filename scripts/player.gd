@@ -213,10 +213,11 @@ func _physics_process(delta: float) -> void:
 	else:
 		var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		var direction = (transform.basis * Vector3(-input.x, 0, -input.y)).normalized()
-		var accel = ACCELERATION if is_on_floor() else AIR_ACCELERATION
+		var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
+		var accel = ACCELERATION if is_on_floor() else current_air_accel
 		if direction:
-			velocity.x = move_toward(velocity.x, direction.x * SPEED, accel * delta)
-			velocity.z = move_toward(velocity.z, direction.z * SPEED, accel * delta)
+			velocity.x = move_toward(velocity.x, direction.x * current_speed, accel * delta)
+			velocity.z = move_toward(velocity.z, direction.z * current_speed, accel * delta)
 		else:
 			velocity.x = move_toward(velocity.x, 0, accel * delta) if not is_on_floor() else 0
 			velocity.z = move_toward(velocity.z, 0, accel * delta) if not is_on_floor() else 0
