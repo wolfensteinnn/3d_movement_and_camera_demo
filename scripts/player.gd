@@ -15,6 +15,9 @@ var initial_transform: Vector3
 # MOVEMENT AND PHYSICS
 var SPEED = 1.65
 var ACCELERATION = 10.0
+# CLIMBING
+var is_climbing = false
+var climb_speed: float = 1.0
 
 #SPRINT
 const SPRINT_SPEED = 2.6
@@ -25,18 +28,25 @@ var jumped_while_sprinting: bool = false
 
 # STAMINA
 const STAMINA_MAX = 100.0
-const STAMINA_REGEN_RATE = 12.0
-const STAMINA_REGEN_DELAY = 1.4
-const STAMINA_JUMP_COST = 30.0
 const STAMINA_MOMENTUM_BOOST_EMPTY = 1.08
+
+const STAMINA_REGEN_RATE = 52.0        # per second
+const STAMINA_REGEN_DELAY = 1.4        # seconds after last use before regen starts
+const STAMINA_JUMP_COST = 30.0
+const STAMINA_CLIMB_COST = 0.5 # weaker boost when out of stamina
+
 var stamina: float = 100.0
 var stamina_regen_timer: float = 0.0
 
 # GRAVITY
 const GRAVITY_UP = -7.0
 const GRAVITY_DOWN = -16.0
+
 const GRAVITY_PEAK_THRESHOLD = 1.0
 const GRAVITY_PEAK_MULTIPLIER = 0.4
+
+var gravity_climb: float = 4.0
+
 
 #JUMP
 const JUMP_VELOCITY = 1.78
@@ -129,9 +139,9 @@ func _physics_process(delta: float) -> void:
 
 	rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
 	camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
-
+	
 	# Gravity
-	if not is_on_floor():
+	if not is_on_floor() and not is_climbing:
 		jump_grace_timer -= delta
 		var grav: float
 		if velocity.y > GRAVITY_PEAK_THRESHOLD:
@@ -174,8 +184,6 @@ func _physics_process(delta: float) -> void:
 		jump_buffer_timer = 0.0
 
 	# Movement
-	var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var direction = (transform.basis * Vector3(-input.x, 0, -input.y)).normalized()
 
 	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0.0 and is_on_floor()
 	var current_speed = SPRINT_SPEED if is_sprinting else SPEED
@@ -186,19 +194,46 @@ func _physics_process(delta: float) -> void:
 		stamina_regen_timer = STAMINA_REGEN_DELAY
 		
 
-	var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
-	var accel = ACCELERATION if is_on_floor() else current_air_accel
+	if is_climbing:
+		var wall_normal = get_wall_normal()
+		var input = Vector2(Input.get_axis("move_right", "move_left"), Input.get_axis("move_forward", "move_back"))
+		var up_dir = wall_normal.cross(global_basis.x).normalized()
+		var right_dir = global_basis.x
+		if stamina >= STAMINA_CLIMB_COST:
+			velocity  = right_dir * input.x * climb_speed
+			velocity += up_dir * input.y * climb_speed
+			velocity -= wall_normal * 2.0
+			stamina = max(stamina - STAMINA_CLIMB_COST, 0.0)
+			stamina_regen_timer = STAMINA_REGEN_DELAY
+		else:
+			is_climbing = false
+			velocity  = Vector3.ZERO
+			velocity.y = -2.0    
 
-	if direction:
-		velocity.x = move_toward(velocity.x, direction.x * current_speed, accel * delta)
-		velocity.z = move_toward(velocity.z, direction.z * current_speed, accel * delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0, accel * delta) if not is_on_floor() else 0
-		velocity.z = move_toward(velocity.z, 0, accel * delta) if not is_on_floor() else 0
+		var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+		var direction = (transform.basis * Vector3(-input.x, 0, -input.y)).normalized()
+		var accel = ACCELERATION if is_on_floor() else AIR_ACCELERATION
+		if direction:
+			velocity.x = move_toward(velocity.x, direction.x * SPEED, accel * delta)
+			velocity.z = move_toward(velocity.z, direction.z * SPEED, accel * delta)
+		else:
+			velocity.x = move_toward(velocity.x, 0, accel * delta) if not is_on_floor() else 0
+			velocity.z = move_toward(velocity.z, 0, accel * delta) if not is_on_floor() else 0
+	
 
 	move_and_slide()
 	_update_bob(delta)
 	_update_stamina(delta)
+	
+	if Input.is_action_pressed("climb") and is_on_wall():
+		is_climbing = true
+	if not Input.is_action_pressed("climb"):
+		is_climbing = false
+	if not is_on_wall():
+		is_climbing = false
+	
+	
 
 func _update_bob(delta: float) -> void:
 	var horizontal_speed = Vector2(velocity.x, velocity.z).length()
