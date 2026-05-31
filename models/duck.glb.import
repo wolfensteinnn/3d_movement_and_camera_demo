@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://5fly4l172l10"
-path="res://.godot/imported/duckAllAnims.glb-ffc9f4654fdda8c5cc4cc0de1f60ceba.scn"
+uid="uid://xcbnmmwdiu6w"
+path="res://.godot/imported/duck.glb-af6623336133712d01a6bfdefd9d6344.scn"
 
 [deps]
 
-source_file="res://models/duckAllAnims.glb"
-dest_files=["res://.godot/imported/duckAllAnims.glb-ffc9f4654fdda8c5cc4cc0de1f60ceba.scn"]
+source_file="res://models/duck.glb"
+dest_files=["res://.godot/imported/duck.glb-af6623336133712d01a6bfdefd9d6344.scn"]
 
 [params]
 

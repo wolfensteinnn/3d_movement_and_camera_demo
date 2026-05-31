@@ -1,7 +1,7 @@
 extends CharacterBody3D
 @onready var camera_mount: Node3D = $CameraMount
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
-@onready var meshes: Skeleton3D = $duckAllAnims/Armature/Skeleton3D
+@onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
 
 var debug_velocity
 
@@ -78,7 +78,7 @@ var target_rotation_y: float = 0.0
 var target_rotation_x: float = 0.0
 
 #ANIMATIONS
-@onready var animation_tree: AnimationTree = $duckAllAnims/AnimationTree
+@onready var animation_tree: AnimationTree = $duck/AnimationTree
 
 
 func _set_stamina_bar(a_bar):
@@ -184,8 +184,12 @@ func _physics_process(delta: float) -> void:
 		jump_buffer_timer = 0.0
 
 	# Movement
-
-	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0.0 and is_on_floor()
+	
+	var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var direction = (transform.basis * Vector3(-input.x, 0, -input.y)).normalized()
+	var forward = global_basis.z
+	var dot = direction.dot(forward) #THIS IS THE DOT PRODUCT WHIHC BASICALLY TELLS US HOW FORWARD DO WE LOOK (CAN WE SPRINT LIKE THAT)
+	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0.0 and is_on_floor() and dot > 0.5
 	var current_speed = SPRINT_SPEED if is_sprinting else SPEED
 
 	if is_sprinting:
@@ -196,12 +200,12 @@ func _physics_process(delta: float) -> void:
 
 	if is_climbing:
 		var wall_normal = get_wall_normal()
-		var input = Vector2(Input.get_axis("move_right", "move_left"), Input.get_axis("move_forward", "move_back"))
+		var climbing_input = Vector2(Input.get_axis("move_right", "move_left"), Input.get_axis("move_forward", "move_back"))
 		var up_dir = wall_normal.cross(global_basis.x).normalized()
 		var right_dir = global_basis.x
 		if stamina >= STAMINA_CLIMB_COST:
-			velocity  = right_dir * input.x * climb_speed
-			velocity += up_dir * input.y * climb_speed
+			velocity  = right_dir * climbing_input.x * climb_speed
+			velocity += up_dir * climbing_input.y * climb_speed
 			velocity -= wall_normal * 2.0
 			stamina = max(stamina - STAMINA_CLIMB_COST, 0.0)
 			stamina_regen_timer = STAMINA_REGEN_DELAY
@@ -211,8 +215,6 @@ func _physics_process(delta: float) -> void:
 			velocity.y = -2.0    
 
 	else:
-		var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-		var direction = (transform.basis * Vector3(-input.x, 0, -input.y)).normalized()
 		var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
 		var accel = ACCELERATION if is_on_floor() else current_air_accel
 		if direction:
@@ -233,8 +235,6 @@ func _physics_process(delta: float) -> void:
 		is_climbing = false
 	if not is_on_wall():
 		is_climbing = false
-	
-	
 
 func _update_bob(delta: float) -> void:
 	var horizontal_speed = Vector2(velocity.x, velocity.z).length()
