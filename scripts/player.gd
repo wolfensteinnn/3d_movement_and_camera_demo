@@ -254,7 +254,6 @@ func _physics_process(delta: float) -> void:
 	climb_tilt = lerp(climb_tilt, horizontal_input * CLIMB_TILT_STRENGTH if is_climbing else 0.0, CLIMB_TILT_SPEED * delta)
 	camera_mount.rotation.z = climb_tilt
 	
-	if is_climbing:
 		
 
 	if is_mantling:
