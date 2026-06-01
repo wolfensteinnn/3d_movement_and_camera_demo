@@ -8,26 +8,37 @@ var debug_velocity
 #UI
 var stamina_bar
 
+# FOV AND CAMERA STUFF
+const FOV_DEFAULT = 70.0
+const FOV_SPRINT = 66.0
+const FOV_LERP_SPEED = 8.0
+const FOV_CLIMB = 70.0
+const CLIMB_TILT_STRENGTH = 0.1
+const CLIMB_TILT_SPEED = 6.0
+var was_climbing: bool = false #WE NEED THIS TO SNAP ON TRANSITION TO CLIMBING
+
 #FOR CUSTOM MULTIPLAYER SPAWNING
 var is_master: bool
 var initial_transform: Vector3
 
 # MOVEMENT AND PHYSICS
-var SPEED = 1.65
+var SPEED = 0.8
 var ACCELERATION = 10.0
+
 # CLIMBING
 var is_climbing = false
 var climb_speed: float = 1.0
+var climb_tilt: float = 0.0
 
 #SPRINT
-const SPRINT_SPEED = 2.6
+const SPRINT_SPEED = 1.5
 const SPRINT_AIR_ACCELERATION = 0.8
 const STAMINA_SPRINT_COST = 18.0
 var is_sprinting: bool = false
 var jumped_while_sprinting: bool = false
 
 # STAMINA
-const STAMINA_MAX = 100.0
+const STAMINA_MAX = 200.0
 const STAMINA_MOMENTUM_BOOST_EMPTY = 1.08
 
 const STAMINA_REGEN_RATE = 52.0        # per second
@@ -47,14 +58,13 @@ const GRAVITY_PEAK_MULTIPLIER = 0.4
 
 var gravity_climb: float = 4.0
 
-
 #JUMP
-const JUMP_VELOCITY = 1.78
+const JUMP_VELOCITY = 1.48
 const JUMP_GRACE_TIME = 0.07
 const JUMP_BUFFER_TIME = 0.12
 var jump_grace_timer: float = 0.0
 var jump_buffer_timer: float = 0.0
-var AIR_ACCELERATION = 3.2
+var AIR_ACCELERATION = 5.6
 const JUMP_MOMENTUM_BOOST = 1.36
 
 # LANDING DIP
@@ -68,8 +78,8 @@ const LOOK_SMOOTHING = 17.0
 const MOUSE_SENSITIVITY = 0.002
 
 # CAMERA BOB
-const BOB_FREQUENCY = 3.2
-const BOB_AMPLITUDE_Y = 0.024
+const BOB_FREQUENCY = 4.8
+const BOB_AMPLITUDE_Y = 0.036
 const BOB_AMPLITUDE_X = 0.01
 var bob_time: float = 0.0
 
@@ -77,8 +87,8 @@ var bob_time: float = 0.0
 var target_rotation_y: float = 0.0
 var target_rotation_x: float = 0.0
 
-#ANIMATIONS
-@onready var animation_tree: AnimationTree = $duck/AnimationTree
+##ANIMATIONS
+#@onready var animation_tree: AnimationTree = $duck/AnimationTree
 
 
 func _set_stamina_bar(a_bar):
@@ -133,7 +143,15 @@ func _update_stamina(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
 		return
+	
+	#FOV
+	if is_climbing and not was_climbing:
+		camera_main.fov = 62.0  # punch value — tweak this for more/less snap
 
+	var target_fov = FOV_SPRINT if is_sprinting else (FOV_CLIMB if is_climbing else FOV_DEFAULT)
+	camera_main.fov = lerp(camera_main.fov, target_fov, FOV_LERP_SPEED * delta)
+	was_climbing = is_climbing
+	
 	if is_instance_valid(debug_velocity):
 		debug_velocity.text = "%.2f" % Vector2(velocity.x, velocity.z).length()
 
@@ -193,11 +211,14 @@ func _physics_process(delta: float) -> void:
 	var current_speed = SPRINT_SPEED if is_sprinting else SPEED
 
 	if is_sprinting:
-		animation_tree.set("parameters/conditions/sprint",true)
 		stamina = max(stamina - STAMINA_SPRINT_COST * delta, 0.0)
 		stamina_regen_timer = STAMINA_REGEN_DELAY
-		
-
+	
+	# CAMERA MOUNT TILT (ON CLIMBING)
+	var horizontal_input = Input.get_axis("move_right", "move_left")
+	climb_tilt = lerp(climb_tilt, horizontal_input * CLIMB_TILT_STRENGTH if is_climbing else 0.0, CLIMB_TILT_SPEED * delta)
+	camera_mount.rotation.z = climb_tilt
+	
 	if is_climbing:
 		var wall_normal = get_wall_normal()
 		var climbing_input = Vector2(Input.get_axis("move_right", "move_left"), Input.get_axis("move_forward", "move_back"))
@@ -224,9 +245,10 @@ func _physics_process(delta: float) -> void:
 			velocity.x = move_toward(velocity.x, 0, accel * delta) if not is_on_floor() else 0
 			velocity.z = move_toward(velocity.z, 0, accel * delta) if not is_on_floor() else 0
 	
-
+	if is_on_floor():
+		_update_bob(delta)
+		
 	move_and_slide()
-	_update_bob(delta)
 	_update_stamina(delta)
 	
 	if Input.is_action_pressed("climb") and is_on_wall():

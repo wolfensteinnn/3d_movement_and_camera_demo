@@ -1242,8 +1242,6 @@ _data = {
 &"sprint": SubResource("Animation_r8c7n")
 }
 
-[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_3vyb7"]
-
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_qhqgy"]
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
@@ -1259,17 +1257,17 @@ height = 0.2
 [node name="Player" type="CharacterBody3D" unique_id=1776387509]
 script = ExtResource("1_qhqgy")
 
-[node name="duck" type="Node3D" parent="." unique_id=471297536]
+[node name="duck" type="Node3D" parent="." unique_id=1418673857]
 
-[node name="Armature" type="Node3D" parent="duck" unique_id=1214002750]
+[node name="Armature" type="Node3D" parent="duck" unique_id=2102467816]
 transform = Transform3D(0.043006383, 0, 0, 0, 0.043006383, 0, 0, 0, 0.043006383, 0.00013715029, 0.010822328, 0.0068484284)
 
-[node name="Skeleton3D" type="Skeleton3D" parent="duck/Armature" unique_id=518930153]
+[node name="Skeleton3D" type="Skeleton3D" parent="duck/Armature" unique_id=476898818]
 bones/0/name = "Bone"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3283064e-10, 2.9802322e-08, 0.6623135)
 bones/0/enabled = true
-bones/0/position = Vector3(2.3283064e-10, 2.9802322e-08, 0.6623135)
+bones/0/position = Vector3(0, 0, 0.66231346)
 bones/0/rotation = Quaternion(0, 0, 0, 1)
 bones/0/scale = Vector3(1, 1, 1)
 bones/1/name = "heade"
@@ -1277,81 +1275,77 @@ bones/1/parent = 0
 bones/1/rest = Transform3D(1, -3.3306696e-16, 2.3841864e-07, -2.2354167e-09, 0.9999562, 0.009376017, -2.3840816e-07, -0.009376018, 0.9999561, 2.3283064e-10, 1, 0)
 bones/1/enabled = true
 bones/1/position = Vector3(2.3283064e-10, 1, 0)
-bones/1/rotation = Quaternion(-0.00468806, 1.1920801e-07, -5.588602e-10, 0.99998903)
+bones/1/rotation = Quaternion(-0.0046880594, 1.19208e-07, -5.588603e-10, 0.99998903)
 bones/1/scale = Vector3(1, 1.0000001, 1)
 bones/2/name = "beaktop"
 bones/2/parent = 1
 bones/2/rest = Transform3D(1, -2.3872082e-07, 9.373824e-09, -1.9213076e-11, -0.039317, -0.9992267, 2.3890482e-07, 0.99922657, -0.039317008, 0.027019057, 0.9580965, 0.8606401)
 bones/2/enabled = true
-bones/2/position = Vector3(0.027019057, 0.9580965, 0.8606401)
-bones/2/rotation = Quaternion(0.7208735, -8.279542e-08, 8.610342e-08, 0.6930667)
+bones/2/position = Vector3(0.027019056, 0.95809644, 0.86064017)
+bones/2/rotation = Quaternion(0.7208734, -8.27954e-08, 8.610339e-08, 0.6930668)
 bones/2/scale = Vector3(1, 0.99999976, 0.9999999)
 bones/3/name = "beakbottom"
 bones/3/parent = 1
 bones/3/rest = Transform3D(1, -2.349469e-07, 9.3738555e-09, 1.2916956e-10, -0.039317127, -0.9992267, 2.351338e-07, 0.9992267, -0.039317127, 0.027019061, 0.7421055, 0.8403832)
 bones/3/enabled = true
-bones/3/position = Vector3(0.027019061, 0.7421055, 0.8403832)
-bones/3/rotation = Quaternion(0.7208735, -8.143514e-08, 8.479562e-08, 0.6930667)
+bones/3/position = Vector3(0.027019061, 0.74210554, 0.84038335)
+bones/3/rotation = Quaternion(0.7208735, -8.143514e-08, 8.479561e-08, 0.6930667)
 bones/3/scale = Vector3(1, 0.9999999, 0.9999999)
 bones/4/name = "leftL"
 bones/4/parent = 0
 bones/4/rest = Transform3D(0.99997526, 0.007052859, 3.0133382e-08, 0.0070528095, -0.9999684, -0.003727043, -2.6256173e-05, 0.0037269513, -0.9999931, 0.8646071, -0.4034419, -0.66322523)
 bones/4/enabled = true
-bones/4/position = Vector3(0.8646071, -0.4034419, -0.66322523)
-bones/4/rotation = Quaternion(0.999992, 0.0035264445, -6.5565614e-06, 0.0018635133)
+bones/4/position = Vector3(0.8646071, -0.40344194, -0.66322523)
+bones/4/rotation = Quaternion(0.99999213, 0.0035264455, -6.556563e-06, 0.0018635135)
 bones/4/scale = Vector3(1.0000001, 1.0000002, 1)
 bones/5/name = "leftA"
 bones/5/parent = 4
 bones/5/rest = Transform3D(0.999753, -0.020704694, -0.008067709, 0.009360908, 0.06314218, 0.9979606, -0.020153057, -0.99778974, 0.0633204, 4.0313353e-09, 0.48926988, 9.2591534e-10)
 bones/5/enabled = true
 bones/5/position = Vector3(4.0313353e-09, 0.48926988, 9.2591534e-10)
-bones/5/rotation = Quaternion(-0.684341, 0.004144055, 0.010309468, 0.72907746)
+bones/5/rotation = Quaternion(-0.684341, 0.004144053, 0.010309467, 0.72907746)
 bones/5/scale = Vector3(0.9999999, 1, 1)
 bones/6/name = "rightL"
 bones/6/parent = 0
 bones/6/rest = Transform3D(0.99997526, 0.007052859, 3.0133382e-08, 0.0070528095, -0.9999684, -0.003727043, -2.6256173e-05, 0.0037269513, -0.9999931, -1.0058385, -0.42900276, -0.66322523)
 bones/6/enabled = true
 bones/6/position = Vector3(-1.0058385, -0.42900276, -0.66322523)
-bones/6/rotation = Quaternion(0.999992, 0.0035264445, -6.5565614e-06, 0.0018635133)
+bones/6/rotation = Quaternion(0.99999213, 0.0035264455, -6.556563e-06, 0.0018635135)
 bones/6/scale = Vector3(1.0000001, 1.0000002, 1)
 bones/7/name = "rightA"
 bones/7/parent = 6
 bones/7/rest = Transform3D(0.9997512, -0.020465348, -0.008859213, 0.009364788, 0.02474165, 0.99965, -0.020238992, -0.9994845, 0.024927147, 3.1971013e-08, 0.48926982, -7.849991e-09)
 bones/7/enabled = true
 bones/7/position = Vector3(3.1971013e-08, 0.48926982, -7.849991e-09)
-bones/7/rotation = Quaternion(-0.69822687, 0.0039745537, 0.01041861, 0.7157898)
+bones/7/rotation = Quaternion(-0.6982268, 0.003974554, 0.01041861, 0.71578985)
 bones/7/scale = Vector3(0.9999999, 1, 1)
 
-[node name="body" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1062044717]
+[node name="body" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=2063309191]
 mesh = SubResource("ArrayMesh_3vyb7")
 skin = SubResource("Skin_g2els")
 
-[node name="eyes" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=222349477]
+[node name="eyes" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1345939395]
 mesh = SubResource("ArrayMesh_qhqgy")
 skin = SubResource("Skin_g2els")
 
-[node name="Legs" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=385626318]
+[node name="Legs" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=2049941183]
 mesh = SubResource("ArrayMesh_dqkch")
 skin = SubResource("Skin_g2els")
 
-[node name="Legs_001" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=829235850]
+[node name="Legs_001" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1028178109]
 mesh = SubResource("ArrayMesh_qlg0r")
 skin = SubResource("Skin_g2els")
 
-[node name="mouth" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=587130324]
+[node name="mouth" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1383515867]
 mesh = SubResource("ArrayMesh_tuyoq")
 skin = SubResource("Skin_g2els")
 
-[node name="mouth_001" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=243714610]
+[node name="mouth_001" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1067066468]
 mesh = SubResource("ArrayMesh_fjrip")
 skin = SubResource("Skin_g2els")
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="duck" unique_id=997231998]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="duck" unique_id=700504795]
 libraries/ = SubResource("AnimationLibrary_smehm")
-
-[node name="AnimationTree" type="AnimationTree" parent="duck" unique_id=536930661]
-tree_root = SubResource("AnimationNodeStateMachine_3vyb7")
-anim_player = NodePath("../AnimationPlayer")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=930139421]
 replication_config = SubResource("SceneReplicationConfig_qhqgy")
