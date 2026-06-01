@@ -1362,3 +1362,13 @@ transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, 0, 0
 cull_mask = 1048573
 fov = 70.0
 near = 0.01
+
+[node name="RayCast3D" type="RayCast3D" parent="." unique_id=1869256851]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.3)
+target_position = Vector3(0, -0.2, 0)
+debug_shape_custom_color = Color(0.8413356, 1.347661e-06, 0.4880334, 1)
+
+[node name="RayCast3DWall" type="RayCast3D" parent="." unique_id=649699875]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.1)
+target_position = Vector3(0, 0, -0.5)
+debug_shape_custom_color = Color(0.6861733, 0.4962082, 0, 1)
