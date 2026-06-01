@@ -2,6 +2,8 @@ extends CharacterBody3D
 @onready var camera_mount: Node3D = $CameraMount
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
 @onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
+@onready var ledge_cast: RayCast3D = $RayCast3D
+@onready var wall_cast: RayCast3D = $RayCast3DWall
 
 var debug_velocity
 
@@ -17,6 +19,7 @@ var SPEED = 1.65
 var ACCELERATION = 10.0
 # CLIMBING
 var is_climbing = false
+var is_mantling = false
 var climb_speed: float = 1.0
 
 #SPRINT
@@ -130,6 +133,38 @@ func _update_stamina(delta: float) -> void:
 	if is_instance_valid(stamina_bar):
 		stamina_bar.value = max(stamina, 0)
 
+func _get_player_height() -> float:
+	var shape = $CollisionShape3D.shape
+	if shape is CapsuleShape3D:
+		return shape.height + shape.radius * 2
+	if shape is BoxShape3D:
+		return shape.size.y
+	return 1.0
+
+func _try_mantle() -> void:
+	if is_mantling:
+		return
+	if ledge_cast.is_colliding():
+		var collision_normal = ledge_cast.get_collision_normal()
+		if collision_normal.y > 0.7:
+			var head_height = global_position.y + _get_player_height()
+			var collision_point = ledge_cast.get_collision_point()
+			var forward = -global_transform.basis.z.normalized()
+			var distance_to_ledge = collision_point.y - global_position.y
+			if collision_point.y <= global_position.y:
+				return
+			print("distance to ledge: ", distance_to_ledge)
+			print("outer ledge y: ", collision_point.y, " head y: ", head_height, " diff: ", collision_point.y - head_height)
+			if distance_to_ledge <= 0.05:
+				print("inner ledge y: ", collision_point.y, " head y: ", head_height, " diff: ", collision_point.y - head_height)
+				print("attempting to mantle")
+				is_mantling = true
+				is_climbing = false
+				global_position = Vector3(global_position.x + forward.x * 0.3,
+				collision_point.y + _get_player_height() * 0.5,
+				global_position.z + forward.z * 0.3)
+				is_mantling = false
+
 func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
 		return
@@ -198,21 +233,29 @@ func _physics_process(delta: float) -> void:
 		stamina_regen_timer = STAMINA_REGEN_DELAY
 		
 
-	if is_climbing:
+	if is_mantling:
+		pass
+
+	elif is_climbing:
 		var wall_normal = get_wall_normal()
 		var climbing_input = Vector2(Input.get_axis("move_right", "move_left"), Input.get_axis("move_forward", "move_back"))
 		var up_dir = wall_normal.cross(global_basis.x).normalized()
 		var right_dir = global_basis.x
-		if stamina >= STAMINA_CLIMB_COST:
-			velocity  = right_dir * climbing_input.x * climb_speed
-			velocity += up_dir * climbing_input.y * climb_speed
-			velocity -= wall_normal * 2.0
-			stamina = max(stamina - STAMINA_CLIMB_COST, 0.0)
-			stamina_regen_timer = STAMINA_REGEN_DELAY
-		else:
-			is_climbing = false
-			velocity  = Vector3.ZERO
-			velocity.y = -2.0    
+		var raycast_direction = global_transform.basis.transposed() * -wall_normal
+		ledge_cast.position = Vector3(0, _get_player_height() * 0.7, 0) + raycast_direction * 0.3
+		_try_mantle()
+		
+		if not is_mantling:
+			if stamina >= STAMINA_CLIMB_COST:
+				velocity  = right_dir * climbing_input.x * climb_speed
+				velocity += up_dir * climbing_input.y * climb_speed
+				velocity -= wall_normal * 2.0
+				stamina = max(stamina - STAMINA_CLIMB_COST, 0.0)
+				stamina_regen_timer = STAMINA_REGEN_DELAY
+			else:
+				is_climbing = false
+				velocity  = Vector3.ZERO
+				velocity.y = -2.0    
 
 	else:
 		var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
