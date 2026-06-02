@@ -1249,13 +1249,10 @@ properties/0/replication_mode = 1
 properties/1/path = NodePath(".:rotation")
 properties/1/spawn = true
 properties/1/replication_mode = 1
-properties/2/path = NodePath("CameraMount/RayCast3DWall:rotation")
-properties/2/spawn = true
-properties/2/replication_mode = 1
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_qhqgy"]
-radius = 0.08930664
-height = 0.17861328
+radius = 0.09
+height = 0.18
 
 [node name="Player" type="CharacterBody3D" unique_id=1776387509]
 collision_mask = 3
@@ -1360,18 +1357,13 @@ shape = SubResource("CapsuleShape3D_qhqgy")
 debug_color = Color(0, 0.6, 0.69803923, 0.77254903)
 
 [node name="CameraMount" type="Node3D" parent="." unique_id=454960021]
+top_level = true
 
 [node name="Camera3D" type="Camera3D" parent="CameraMount" unique_id=240288604]
 transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, 0, 0.11100077, 0.032819644)
 cull_mask = 1048573
 fov = 70.0
 near = 0.01
-
-[node name="RayCast3DWall" type="RayCast3D" parent="CameraMount" unique_id=649699875]
-transform = Transform3D(1, 0, 0, 0, -1, -8.742278e-08, 0, 8.742278e-08, -1, 0, 0.10940771, 0)
-target_position = Vector3(0, 0, -0.4)
-debug_shape_custom_color = Color(0.6861733, 0.4962082, 0, 1)
-debug_shape_thickness = 1
 
 [node name="SpotLight3D" type="SpotLight3D" parent="CameraMount" unique_id=978045986]
 transform = Transform3D(1, 0, 0, 0, -0.9999697, 0.0077842004, 0, -0.0077842004, -0.9999697, 0, 0, 0)

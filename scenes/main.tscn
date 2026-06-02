@@ -19,8 +19,20 @@ bg_color = Color(0.14509805, 0.22352941, 0.03137255, 0.25882354)
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jyhfs"]
 bg_color = Color(0.15294118, 0.72156864, 0.15294118, 0.6666667)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sugp2"]
-albedo_color = Color(0.65581644, 0.96154684, 0.8105392, 1)
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_jyhfs"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tbgi4"]
+albedo_texture = SubResource("NoiseTexture2D_jyhfs")
+
+[sub_resource type="Gradient" id="Gradient_tefeu"]
+colors = PackedColorArray(0.8039216, 0, 0, 1, 0.37254903, 0.39607844, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_o6xl0"]
+gradient = SubResource("Gradient_tefeu")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tefeu"]
+albedo_texture = SubResource("GradientTexture2D_o6xl0")
+roughness = 0.03
 
 [node name="Node3D" type="Node3D" unique_id=1848200090]
 script = ExtResource("1_0wfyh")
@@ -102,35 +114,21 @@ grow_horizontal = 2
 grow_vertical = 0
 theme_override_styles/background = SubResource("StyleBoxFlat_sugp2")
 theme_override_styles/fill = SubResource("StyleBoxFlat_jyhfs")
+max_value = 200.0
 show_percentage = false
 
-[node name="CSGBox3D2" type="CSGBox3D" parent="." unique_id=834979143]
-transform = Transform3D(1.952856, 0, 0, 0, 0.7344013, 0, 0, 0, 4.3267436, 5.0242395, 1.0382961, -3.309206)
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="." unique_id=848891542]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.138765)
 use_collision = true
-size = Vector3(1.3458252, 2.753418, 1)
-material = SubResource("StandardMaterial3D_sugp2")
+radius = 1.345
+height = 3.37
+sides = 6
+material = SubResource("StandardMaterial3D_tbgi4")
 
-[node name="CSGBox3D4" type="CSGBox3D" parent="." unique_id=1334129782]
-transform = Transform3D(1.0236324, 0, 0, 0, 0.7663384, 0, 0, 0, 4.3267436, 6.899102, 2.9645169, -4.3018956)
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=500058121]
+transform = Transform3D(1, 0, 0, 0, 3.5485408, -0.34462652, 0, 1.3027264, 0.9387399, 0, 1.3312671, 3.5007837)
 use_collision = true
-size = Vector3(1.3458252, 2.753418, 0.5411377)
-material = SubResource("StandardMaterial3D_sugp2")
-
-[node name="CSGBox3D3" type="CSGBox3D" parent="." unique_id=1541527720]
-transform = Transform3D(0.20375158, 0.61692417, 0, -0.20072302, 0.6262325, 0, 0, 0, 4.326743, 2.587699, 0.543213, -3.2954988)
-use_collision = true
-size = Vector3(1, 2.753418, 1)
-material = SubResource("StandardMaterial3D_sugp2")
-
-[node name="CSGBox3D5" type="CSGBox3D" parent="." unique_id=1778881947]
-transform = Transform3D(0.21062493, 0.27067614, 2.6064315, -0.11033336, 0.81102806, 0, -0.15895948, -0.20428036, 3.453581, 4.4094596, 0.5416025, 0.4421391)
-use_collision = true
-size = Vector3(1, 2.753418, 1)
-material = SubResource("StandardMaterial3D_sugp2")
-
-[node name="CSGCylinder3D" type="CSGCylinder3D" parent="." unique_id=667477043]
-transform = Transform3D(1, 0, 0, 0, 8.029747, 0, 0, 0, 1, 0, 0, -0.020751476)
-use_collision = true
+material = SubResource("StandardMaterial3D_tefeu")
 
 [connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]
