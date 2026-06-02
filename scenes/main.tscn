@@ -117,10 +117,20 @@ size = Vector3(1.3458252, 2.753418, 0.5411377)
 material = SubResource("StandardMaterial3D_sugp2")
 
 [node name="CSGBox3D3" type="CSGBox3D" parent="." unique_id=1541527720]
-transform = Transform3D(0.26387686, 0.3391107, 0, -0.110333376, 0.8110281, 0, 0, 0, 4.3267436, 3.1138868, 0.543213, -3.2954988)
+transform = Transform3D(0.20375158, 0.61692417, 0, -0.20072302, 0.6262325, 0, 0, 0, 4.326743, 2.587699, 0.543213, -3.2954988)
 use_collision = true
 size = Vector3(1, 2.753418, 1)
 material = SubResource("StandardMaterial3D_sugp2")
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="." unique_id=1778881947]
+transform = Transform3D(0.21062493, 0.27067614, 2.6064315, -0.11033336, 0.81102806, 0, -0.15895948, -0.20428036, 3.453581, 4.4094596, 0.5416025, 0.4421391)
+use_collision = true
+size = Vector3(1, 2.753418, 1)
+material = SubResource("StandardMaterial3D_sugp2")
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="." unique_id=667477043]
+transform = Transform3D(1, 0, 0, 0, 8.029747, 0, 0, 0, 1, 0, 0, -0.020751476)
+use_collision = true
 
 [connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]

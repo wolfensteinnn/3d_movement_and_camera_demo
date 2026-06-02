@@ -18,7 +18,7 @@ const FOV_LERP_SPEED = 8.0
 const FOV_CLIMB = 70.0
 const CLIMB_TILT_STRENGTH = 0.1
 const CLIMB_TILT_SPEED = 6.0
-const CAMERA_CLIMB_OFFSET_VALUE = 0.3
+const CAMERA_CLIMB_OFFSET_VALUE = 0.15
 var climb_camera_offset = 0.0
 var was_climbing: bool = false #WE NEED THIS TO SNAP ON TRANSITION TO CLIMBING
 
@@ -286,7 +286,7 @@ func _physics_process(delta: float) -> void:
 			
 			var desired_pos = hit.position + current_wall_normal * 0.08
 			desired_pos.y = global_position.y  # let vertical movement be input driven
-			global_position = desired_pos
+			#global_position = desired_pos
 			
 			velocity.x = right_dir.x * climbing_input.x * climb_speed
 			velocity.z = right_dir.z * climbing_input.x * climb_speed
