@@ -1249,20 +1249,24 @@ properties/0/replication_mode = 1
 properties/1/path = NodePath(".:rotation")
 properties/1/spawn = true
 properties/1/replication_mode = 1
+properties/2/path = NodePath("CameraMount/RayCast3DWall:rotation")
+properties/2/spawn = true
+properties/2/replication_mode = 1
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_qhqgy"]
-radius = 0.1
-height = 0.2
+radius = 0.08930664
+height = 0.17861328
 
 [node name="Player" type="CharacterBody3D" unique_id=1776387509]
+collision_mask = 3
 script = ExtResource("1_qhqgy")
 
-[node name="duck" type="Node3D" parent="." unique_id=1418673857]
+[node name="duck" type="Node3D" parent="." unique_id=313610452]
 
-[node name="Armature" type="Node3D" parent="duck" unique_id=2102467816]
+[node name="Armature" type="Node3D" parent="duck" unique_id=816338373]
 transform = Transform3D(0.043006383, 0, 0, 0, 0.043006383, 0, 0, 0, 0.043006383, 0.00013715029, 0.010822328, 0.0068484284)
 
-[node name="Skeleton3D" type="Skeleton3D" parent="duck/Armature" unique_id=476898818]
+[node name="Skeleton3D" type="Skeleton3D" parent="duck/Armature" unique_id=602322426]
 bones/0/name = "Bone"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3283064e-10, 2.9802322e-08, 0.6623135)
@@ -1320,38 +1324,38 @@ bones/7/position = Vector3(3.1971013e-08, 0.48926982, -7.849991e-09)
 bones/7/rotation = Quaternion(-0.6982268, 0.003974554, 0.01041861, 0.71578985)
 bones/7/scale = Vector3(0.9999999, 1, 1)
 
-[node name="body" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=2063309191]
+[node name="body" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1399548607]
 mesh = SubResource("ArrayMesh_3vyb7")
 skin = SubResource("Skin_g2els")
 
-[node name="eyes" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1345939395]
+[node name="eyes" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1820339794]
 mesh = SubResource("ArrayMesh_qhqgy")
 skin = SubResource("Skin_g2els")
 
-[node name="Legs" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=2049941183]
+[node name="Legs" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1336850331]
 mesh = SubResource("ArrayMesh_dqkch")
 skin = SubResource("Skin_g2els")
 
-[node name="Legs_001" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1028178109]
+[node name="Legs_001" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1744285054]
 mesh = SubResource("ArrayMesh_qlg0r")
 skin = SubResource("Skin_g2els")
 
-[node name="mouth" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1383515867]
+[node name="mouth" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=502814371]
 mesh = SubResource("ArrayMesh_tuyoq")
 skin = SubResource("Skin_g2els")
 
-[node name="mouth_001" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=1067066468]
+[node name="mouth_001" type="MeshInstance3D" parent="duck/Armature/Skeleton3D" unique_id=829197668]
 mesh = SubResource("ArrayMesh_fjrip")
 skin = SubResource("Skin_g2els")
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="duck" unique_id=700504795]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="duck" unique_id=1841542168]
 libraries/ = SubResource("AnimationLibrary_smehm")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=930139421]
 replication_config = SubResource("SceneReplicationConfig_qhqgy")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1035750963]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.071566135, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06087277, 0)
 shape = SubResource("CapsuleShape3D_qhqgy")
 debug_color = Color(0, 0.6, 0.69803923, 0.77254903)
 
@@ -1363,12 +1367,19 @@ cull_mask = 1048573
 fov = 70.0
 near = 0.01
 
+[node name="RayCast3DWall" type="RayCast3D" parent="CameraMount" unique_id=649699875]
+transform = Transform3D(1, 0, 0, 0, -1, -8.742278e-08, 0, 8.742278e-08, -1, 0, 0.10940771, 0)
+target_position = Vector3(0, 0, -0.4)
+debug_shape_custom_color = Color(0.6861733, 0.4962082, 0, 1)
+debug_shape_thickness = 1
+
+[node name="SpotLight3D" type="SpotLight3D" parent="CameraMount" unique_id=978045986]
+transform = Transform3D(1, 0, 0, 0, -0.9999697, 0.0077842004, 0, -0.0077842004, -0.9999697, 0, 0, 0)
+light_energy = 0.08
+spot_range = 1.0282757
+spot_angle = 45.309982
+
 [node name="RayCast3D" type="RayCast3D" parent="." unique_id=1869256851]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.3)
 target_position = Vector3(0, -0.2, 0)
 debug_shape_custom_color = Color(0.8413356, 1.347661e-06, 0.4880334, 1)
-
-[node name="RayCast3DWall" type="RayCast3D" parent="." unique_id=649699875]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.1)
-target_position = Vector3(0, 0, -0.5)
-debug_shape_custom_color = Color(0.6861733, 0.4962082, 0, 1)

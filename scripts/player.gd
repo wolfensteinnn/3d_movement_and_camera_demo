@@ -3,12 +3,13 @@ extends CharacterBody3D
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
 @onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
 @onready var ledge_cast: RayCast3D = $RayCast3D
-@onready var wall_cast: RayCast3D = $RayCast3DWall
+@onready var wall_cast: RayCast3D = $CameraMount/RayCast3DWall
 
 var debug_velocity
 
 #UI
 var stamina_bar
+var cursor
 
 # FOV AND CAMERA STUFF
 const FOV_DEFAULT = 70.0
@@ -17,7 +18,10 @@ const FOV_LERP_SPEED = 8.0
 const FOV_CLIMB = 70.0
 const CLIMB_TILT_STRENGTH = 0.1
 const CLIMB_TILT_SPEED = 6.0
+const CAMERA_CLIMB_OFFSET_VALUE = 0.3
+var climb_camera_offset = 0.0
 var was_climbing: bool = false #WE NEED THIS TO SNAP ON TRANSITION TO CLIMBING
+
 
 #FOR CUSTOM MULTIPLAYER SPAWNING
 var is_master: bool
@@ -27,10 +31,14 @@ var initial_transform: Vector3
 var SPEED = 0.8
 var ACCELERATION = 10.0
 
+# NEW CLIMBING
+var climb_wall_normal: Vector3 = Vector3.ZERO
+var current_wall_normal: Vector3 = Vector3.ZERO #FOR INTERPOLATION
+
 # CLIMBING
 var is_climbing = false
 var is_mantling = false
-var climb_speed: float = 1.0
+var climb_speed: float = 0.28
 var climb_tilt: float = 0.0
 
 #SPRINT
@@ -54,7 +62,7 @@ var stamina_regen_timer: float = 0.0
 
 # GRAVITY
 const GRAVITY_UP = -7.0
-const GRAVITY_DOWN = -16.0
+const GRAVITY_DOWN = -12.0
 
 const GRAVITY_PEAK_THRESHOLD = 1.0
 const GRAVITY_PEAK_MULTIPLIER = 0.4
@@ -81,8 +89,8 @@ const LOOK_SMOOTHING = 17.0
 const MOUSE_SENSITIVITY = 0.002
 
 # CAMERA BOB
-const BOB_FREQUENCY = 4.8
-const BOB_AMPLITUDE_Y = 0.036
+const BOB_FREQUENCY = 13.6
+const BOB_AMPLITUDE_Y = 0.03
 const BOB_AMPLITUDE_X = 0.01
 var bob_time: float = 0.0
 
@@ -93,6 +101,20 @@ var target_rotation_x: float = 0.0
 ##ANIMATIONS
 #@onready var animation_tree: AnimationTree = $duck/AnimationTree
 
+
+func _set_cursor(a_cursor):
+	cursor = a_cursor
+
+func _set_cursor_active():
+	if !is_climbing:
+		cursor.texture = preload("res://CrossHairActive.png")
+
+func _set_cursor_base():
+	if !is_climbing:
+		cursor.texture = preload("res://CrossHair.png")
+
+func _set_cursor_climb():
+	cursor.texture = preload("res://CrossHairClimb.png")
 
 func _set_stamina_bar(a_bar):
 	stamina_bar = a_bar
@@ -143,44 +165,39 @@ func _update_stamina(delta: float) -> void:
 	if is_instance_valid(stamina_bar):
 		stamina_bar.value = max(stamina, 0)
 
-func _get_player_height() -> float:
-	var shape = $CollisionShape3D.shape
-	if shape is CapsuleShape3D:
-		return shape.height + shape.radius * 2
-	if shape is BoxShape3D:
-		return shape.size.y
-	return 1.0
+func _maintain_climb() -> Dictionary:
+	var space_state = get_world_3d().direct_space_state
+	var query = PhysicsRayQueryParameters3D.create(
+		global_position,
+		global_position + (-climb_wall_normal * 0.4)
+	)
+	query.exclude = [self]
+	return space_state.intersect_ray(query)
 
-func _try_mantle() -> void:
-	if is_mantling:
-		return
-	if ledge_cast.is_colliding():
-		var collision_normal = ledge_cast.get_collision_normal()
-		if collision_normal.y > 0.7:
-			var head_height = global_position.y + _get_player_height()
-			var collision_point = ledge_cast.get_collision_point()
-			var forward = -global_transform.basis.z.normalized()
-			var distance_to_ledge = collision_point.y - global_position.y
-			if collision_point.y <= global_position.y:
-				return
-			print("distance to ledge: ", distance_to_ledge)
-			print("outer ledge y: ", collision_point.y, " head y: ", head_height, " diff: ", collision_point.y - head_height)
-			if distance_to_ledge <= 0.05:
-				print("inner ledge y: ", collision_point.y, " head y: ", head_height, " diff: ", collision_point.y - head_height)
-				print("attempting to mantle")
-				is_mantling = true
-				is_climbing = false
-				global_position = Vector3(global_position.x + forward.x * 0.3,
-				collision_point.y + _get_player_height() * 0.5,
-				global_position.z + forward.z * 0.3)
-				is_mantling = false
+func _start_climb() -> void:
+	current_wall_normal = climb_wall_normal
+	_set_cursor_climb()
+	is_climbing = true
+	set_collision_mask_value(1, false)
+	var hit = _maintain_climb()
+	if hit:
+		global_position = hit.position + climb_wall_normal * 0.08
+	velocity = Vector3.ZERO
+	global_position.y += 0.12 #A SMALL JUMP UPWARDS WHEN STARTING TO CLIMB
+	climb_camera_offset = -CAMERA_CLIMB_OFFSET_VALUE
+
+func _stop_climb() -> void:
+	is_climbing = false
+	set_collision_mask_value(1, true)
+	climb_camera_offset = 0.0
 
 func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
 		return
 	
+	
 	#FOV
-	if is_climbing and not was_climbing:
+	if is_climbing and not was_climbing: 
 		camera_main.fov = 62.0  # punch value — tweak this for more/less snap
 
 	var target_fov = FOV_SPRINT if is_sprinting else (FOV_CLIMB if is_climbing else FOV_DEFAULT)
@@ -191,7 +208,7 @@ func _physics_process(delta: float) -> void:
 		debug_velocity.text = "%.2f" % Vector2(velocity.x, velocity.z).length()
 
 	rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-	camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+	camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x + climb_camera_offset, LOOK_SMOOTHING * delta)
 	
 	# Gravity
 	if not is_on_floor() and not is_climbing:
@@ -253,32 +270,34 @@ func _physics_process(delta: float) -> void:
 	var horizontal_input = Input.get_axis("move_right", "move_left")
 	climb_tilt = lerp(climb_tilt, horizontal_input * CLIMB_TILT_STRENGTH if is_climbing else 0.0, CLIMB_TILT_SPEED * delta)
 	camera_mount.rotation.z = climb_tilt
-	
-		
 
 	if is_mantling:
 		pass
 
 	elif is_climbing:
-		var wall_normal = get_wall_normal()
-		var climbing_input = Vector2(Input.get_axis("move_right", "move_left"), Input.get_axis("move_forward", "move_back"))
-		var up_dir = wall_normal.cross(global_basis.x).normalized()
-		var right_dir = global_basis.x
-		var raycast_direction = global_transform.basis.transposed() * -wall_normal
-		ledge_cast.position = Vector3(0, _get_player_height() * 0.7, 0) + raycast_direction * 0.3
-		_try_mantle()
-		
-		if not is_mantling:
-			if stamina >= STAMINA_CLIMB_COST:
-				velocity  = right_dir * climbing_input.x * climb_speed
-				velocity += up_dir * climbing_input.y * climb_speed
-				velocity -= wall_normal * 2.0
-				stamina = max(stamina - STAMINA_CLIMB_COST, 0.0)
+		var hit = _maintain_climb()
+		if hit.is_empty():
+			_stop_climb()
+		else:
+			var climbing_input = Vector2(Input.get_axis("move_right", "move_left"), Input.get_axis("move_forward", "move_back"))
+			current_wall_normal = current_wall_normal.lerp(climb_wall_normal, 8.0 * delta)
+			var right_dir = current_wall_normal.cross(Vector3.UP).normalized()
+			var up_dir = Vector3.UP
+			
+			var desired_pos = hit.position + current_wall_normal * 0.08
+			desired_pos.y = global_position.y  # let vertical movement be input driven
+			global_position = desired_pos
+			
+			velocity.x = right_dir.x * climbing_input.x * climb_speed
+			velocity.z = right_dir.z * climbing_input.x * climb_speed
+			velocity.y = -climbing_input.y * climb_speed
+			
+			if stamina > 0.0:
+				stamina = max(stamina - STAMINA_CLIMB_COST * delta, 0.0)
 				stamina_regen_timer = STAMINA_REGEN_DELAY
 			else:
-				is_climbing = false
-				velocity  = Vector3.ZERO
-				velocity.y = -2.0    
+				_stop_climb()
+				velocity.y = -2.0
 
 	else:
 		var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
@@ -290,18 +309,30 @@ func _physics_process(delta: float) -> void:
 			velocity.x = move_toward(velocity.x, 0, accel * delta) if not is_on_floor() else 0
 			velocity.z = move_toward(velocity.z, 0, accel * delta) if not is_on_floor() else 0
 	
-	if is_on_floor():
+	if is_on_floor() and !is_climbing:
 		_update_bob(delta)
 		
 	move_and_slide()
 	_update_stamina(delta)
 	
-	if Input.is_action_pressed("climb") and is_on_wall():
-		is_climbing = true
+	#NEW CLIMBING
+	if wall_cast.is_colliding():
+		var wall_normal = wall_cast.get_collision_normal()
+		if wall_normal.y < 0.45:
+			_set_cursor_active()
+			if Input.is_action_pressed("climb") and not is_climbing:
+				climb_wall_normal = wall_normal
+				_start_climb()
+		else:
+			_set_cursor_base()
+			if not _maintain_climb():
+				_stop_climb()
+	else:
+		if !is_climbing:
+			_set_cursor_base()
+
 	if not Input.is_action_pressed("climb"):
-		is_climbing = false
-	if not is_on_wall():
-		is_climbing = false
+		_stop_climb()
 
 func _update_bob(delta: float) -> void:
 	var horizontal_speed = Vector2(velocity.x, velocity.z).length()
