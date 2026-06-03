@@ -1375,3 +1375,7 @@ spot_angle = 45.309982
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.3)
 target_position = Vector3(0, -0.2, 0)
 debug_shape_custom_color = Color(0.8413356, 1.347661e-06, 0.4880334, 1)
+
+[node name="GrabCast" type="RayCast3D" parent="." unique_id=341709708]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0.05, 0)
+target_position = Vector3(0, 0, 1)

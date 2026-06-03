@@ -3,6 +3,7 @@ extends CharacterBody3D
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
 @onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
 @onready var ledge_cast: RayCast3D = $RayCast3D
+@onready var grab_cast: RayCast3D = $GrabCast
 
 var debug_velocity
 
@@ -93,6 +94,17 @@ const LANDING_DIP_STRENGTH = 0.1
 const LANDING_DIP_SPEED = 14.0
 var landing_dip: float = 0.0
 var was_on_floor: bool = true
+
+# THROWING
+var held_player: CharacterBody3D = null
+var is_held: bool = false
+var holder_authority: int = -1
+@export var grab_range: float = 0.2
+var throw_charge: float = 0.0
+var max_throw_force: float = 100.00
+var charge_speed: float = 5.0
+var held_player_original_authority: int = -1
+var is_thrown: bool = false
 
 # CAMERA AND LOOKING
 const LOOK_SMOOTHING = 17.0
@@ -326,10 +338,62 @@ func _try_acquire_wall() -> Dictionary:
 
 	return {}
 
+func _try_grab() -> void:
+	grab_cast.force_raycast_update()
+	
+	if grab_cast.is_colliding():
+		var hold_target = grab_cast.get_collider() 
+		if hold_target is CharacterBody3D and hold_target != self:
+			held_player = hold_target
+			held_player_original_authority = held_player.get_multiplayer_authority()
+			held_player.set_multiplayer_authority((get_multiplayer_authority()))
+			held_player.rpc("set_held", true, get_multiplayer_authority())
+
+@rpc("any_peer", "reliable")
+func set_held(held: bool, holder_id: int) -> void:
+	is_held = held
+	holder_authority = holder_id
+	if not held:
+		holder_authority = -1
+		set_multiplayer_authority(name.to_int())
+	else:
+		set_multiplayer_authority(holder_id)
+
+func _throw_player() -> void:
+	if held_player == null:
+		return
+	var throw_direction = -camera_main.global_transform.basis.z.normalized()
+	var throw_velocity = throw_direction * throw_charge
+	throw_velocity.y = throw_charge * 0.5
+	held_player.set_multiplayer_authority(held_player_original_authority)
+	held_player.rpc("set_held", false, -1)
+	held_player.rpc("receive_throw", throw_velocity)
+	throw_charge = 0.0
+	held_player = null
+
+func _update_held_player() -> void:
+	if held_player == null or not held_player.is_multiplayer_authority():
+		return
+	var hold_position = global_position + (global_basis.z * 0.6)
+	hold_position.y = global_position.y + 0.2
+	held_player.global_position = hold_position
+	held_player.velocity = Vector3.ZERO
+
+@rpc("any_peer", "reliable")
+func receive_throw(throw_velocity: Vector3) -> void:
+	if is_multiplayer_authority():
+		is_thrown = true
+		velocity = throw_velocity
+		#first_person_cam.current = false switch cam in the future
+		#thir_person_cam.current = true
+
+
 func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
+		if is_held:
+			velocity = Vector3.ZERO
+			move_and_slide()
 		return
-	
 	
 	if climb_reacquire_timer > 0.0:
 		climb_reacquire_timer -= delta
@@ -441,7 +505,7 @@ func _physics_process(delta: float) -> void:
 			_stop_climb()
 			velocity.y = -2.0
 
-	else:
+	elif not is_thrown:
 		var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
 		var accel = ACCELERATION if is_on_floor() else current_air_accel
 		if direction:
@@ -451,7 +515,9 @@ func _physics_process(delta: float) -> void:
 			velocity.x = move_toward(velocity.x, 0, accel * delta) if not is_on_floor() else 0
 			velocity.z = move_toward(velocity.z, 0, accel * delta) if not is_on_floor() else 0
 	
-	
+	if is_thrown and is_on_floor():
+		is_thrown = false
+
 	_update_bob(delta)
 	move_and_slide()
 	_update_stamina(delta)
@@ -498,6 +564,18 @@ func _physics_process(delta: float) -> void:
 		if is_climbing:
 			_stop_climb()
 	
+	#THROW
+	if Input.is_action_just_pressed("grab") and held_player == null:
+		_try_grab()
+	
+	if Input.is_action_pressed("climb") and held_player != null:
+		throw_charge = min(throw_charge + charge_speed * delta, max_throw_force)
+	
+	if Input.is_action_just_released("climb") and held_player != null:
+		_throw_player()
+	
+	if held_player != null:
+		_update_held_player()
 	
 func _update_bob(delta: float) -> void:
 	var horizontal_speed = Vector2(velocity.x, velocity.z).length()
