@@ -2,7 +2,6 @@ extends CharacterBody3D
 @onready var camera_mount: Node3D = $CameraMount
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
 @onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
-@onready var ledge_cast: RayCast3D = $RayCast3D
 @onready var grab_cast: RayCast3D = $CameraMount/GrabCast
 
 var debug_velocity
@@ -221,8 +220,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and get_window().has_focus():
 			target_rotation_x += event.relative.y * MOUSE_SENSITIVITY
 			target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
-			if not is_held:
-				target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
+			target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
+			if is_held:  # only bother broadcasting when held, normally sync handles it
+				rpc("sync_look_rotation", target_rotation_x, target_rotation_y)
 		return
 	if !is_multiplayer_authority():
 		return
@@ -481,6 +481,11 @@ func _throw_player() -> void:
 	throw_charge = 0.0
 	held_player = null
 
+@rpc("any_peer", "unreliable")
+func sync_look_rotation(rot_x: float, rot_y: float) -> void:
+	target_rotation_x = rot_x
+	target_rotation_y = rot_y
+
 func _update_held_player() -> void:
 	if held_player == null or not held_player.is_multiplayer_authority():
 		return
@@ -488,6 +493,7 @@ func _update_held_player() -> void:
 	hold_position.y = global_position.y + 0.2
 	held_player.global_position = hold_position
 	held_player.velocity = Vector3.ZERO
+	#held_player.rpc("_move_camera_on_held",held_player_original_authority)
 
 @rpc("any_peer", "reliable")
 func receive_throw(throw_velocity: Vector3) -> void:
@@ -495,7 +501,17 @@ func receive_throw(throw_velocity: Vector3) -> void:
 		is_thrown = true
 		velocity = throw_velocity
 
+@rpc("any_peer","reliable")
+func _move_camera_on_held(delta):
+	velocity = Vector3.ZERO
+	rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+	camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+	camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+	move_and_slide()
+	_update_bob(delta)
+	
 
+	
 func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
 		if is_held:
@@ -503,9 +519,24 @@ func _physics_process(delta: float) -> void:
 			rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
 			camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
 			camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
-			_update_bob(delta)
 			move_and_slide()
+			_update_bob(delta)
 		return
+			
+			#velocity = Vector3.ZERO
+			#rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			#camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			#camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+			#move_and_slide()
+			#_update_bob(delta)
+		#if is_held:
+			#velocity = Vector3.ZERO
+			#rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			#print(rotation.y)
+			#camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			#camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+			#_update_bob(delta)
+
 
 	if climb_reacquire_timer > 0.0:
 		climb_reacquire_timer -= delta
