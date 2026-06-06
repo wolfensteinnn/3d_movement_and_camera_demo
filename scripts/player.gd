@@ -3,7 +3,7 @@ extends CharacterBody3D
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
 @onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
 @onready var ledge_cast: RayCast3D = $RayCast3D
-@onready var grab_cast: RayCast3D = $GrabCast
+@onready var grab_cast: RayCast3D = $CameraMount/GrabCast
 
 var debug_velocity
 
@@ -209,7 +209,21 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
+func _input(event: InputEvent) -> void:
+# Re-lock mouse when clicking into window
+	if event is InputEventMouseButton and event.pressed:
+		if get_window().has_focus() and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			return
+
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and get_window().has_focus():
+			target_rotation_x += event.relative.y * MOUSE_SENSITIVITY
+			target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
+			if not is_held:
+				target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
+		return
 	if !is_multiplayer_authority():
 		return
 	if event is InputEventKey and event.pressed:
@@ -217,10 +231,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
-	if event is InputEventMouseMotion:
-		target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
-		target_rotation_x += event.relative.y * MOUSE_SENSITIVITY
-		target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
+	#if event is InputEventMouseMotion:
+		#target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
+		#target_rotation_x += event.relative.y * MOUSE_SENSITIVITY
+		#target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
 
 	if event.is_action_pressed("jump"):
 		jump_buffer_timer = JUMP_BUFFER_TIME
@@ -486,6 +500,9 @@ func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
 		if is_held:
 			velocity = Vector3.ZERO
+			rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
 			_update_bob(delta)
 			move_and_slide()
 		return
