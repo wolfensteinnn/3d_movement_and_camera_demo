@@ -5,27 +5,21 @@
 [ext_resource type="Script" uid="uid://cqbuk54r7gyso" path="res://scripts/multiplayer_spawner.gd" id="3_sugp2"]
 [ext_resource type="Texture2D" uid="uid://b76hdw73n6r7g" path="res://CrossHair.png" id="4_jyhfs"]
 
-[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_0wfyh"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_sugp2"]
-size = Vector3(60, 0, 60)
-
-[sub_resource type="PlaneMesh" id="PlaneMesh_jyhfs"]
-size = Vector2(60, 60)
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sugp2"]
 bg_color = Color(0.14509805, 0.22352941, 0.03137255, 0.25882354)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jyhfs"]
 bg_color = Color(0.15294118, 0.72156864, 0.15294118, 0.6666667)
 
-[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_jyhfs"]
+[sub_resource type="Gradient" id="Gradient_jyhfs"]
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_tbgi4"]
+gradient = SubResource("Gradient_jyhfs")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tbgi4"]
-albedo_texture = SubResource("NoiseTexture2D_jyhfs")
+albedo_texture = SubResource("GradientTexture2D_tbgi4")
 
 [sub_resource type="Gradient" id="Gradient_tefeu"]
-colors = PackedColorArray(0.8039216, 0, 0, 1, 0.37254903, 0.39607844, 1, 1)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_o6xl0"]
 gradient = SubResource("Gradient_tefeu")
@@ -85,22 +79,6 @@ spawn_path = NodePath("..")
 script = ExtResource("3_sugp2")
 player = ExtResource("1_o5qli")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=1720493028]
-collision_layer = 3
-physics_material_override = SubResource("PhysicsMaterial_0wfyh")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" unique_id=1688031243]
-shape = SubResource("BoxShape3D_sugp2")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D" unique_id=1629425242]
-mesh = SubResource("PlaneMesh_jyhfs")
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1746640217]
-transform = Transform3D(0.9466661, -0.21339734, -0.24142249, 0.19582692, -0.2139717, 0.9570099, -0.2558809, -0.9532459, -0.16077086, -9.046246, 15.040015, 0.76068306)
-light_color = Color(0.8839264, 0.92312306, 1, 1)
-light_energy = 1.037
-shadow_enabled = true
-
 [node name="StaminaBar" type="ProgressBar" parent="." unique_id=2111663213]
 anchors_preset = -1
 anchor_left = 0.5
@@ -117,6 +95,14 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_jyhfs")
 max_value = 200.0
 show_percentage = false
 
+[node name="CSGCylinder3D2" type="CSGCylinder3D" parent="." unique_id=1596205256]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.7158866)
+use_collision = true
+radius = 0.214
+height = 6.838
+sides = 5
+material = SubResource("StandardMaterial3D_tbgi4")
+
 [node name="CSGCylinder3D" type="CSGCylinder3D" parent="." unique_id=848891542]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.138765)
 use_collision = true
@@ -125,10 +111,54 @@ height = 3.37
 sides = 6
 material = SubResource("StandardMaterial3D_tbgi4")
 
+[node name="CSGCylinder3D3" type="CSGCylinder3D" parent="." unique_id=787996783]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.1159265, -1.0892341, 2.138765)
+use_collision = true
+radius = 1.345
+height = 3.37
+sides = 6
+material = SubResource("StandardMaterial3D_tbgi4")
+
 [node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=500058121]
-transform = Transform3D(1, 0, 0, 0, 3.5485408, -0.34462652, 0, 1.3027264, 0.9387399, 0, 1.3312671, 3.5007837)
+transform = Transform3D(1, 0, 0, 0, 3.0819614, -0.5790251, 0, 2.1887786, 0.81530976, 0, 0.8027036, -2.8140247)
 use_collision = true
 material = SubResource("StandardMaterial3D_tefeu")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="." unique_id=2113328072]
+transform = Transform3D(1.9897008, 0, 0.22183363, 0, 3.074225, 0, -0.8944574, 0, 0.49346402, -1.2567769, 1.0864322, 1.3990052)
+use_collision = true
+size = Vector3(0.29589844, 1, 1)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="." unique_id=1063715509]
+transform = Transform3D(1.9897008, 0, 0.22183363, 0, 3.074225, 0, -0.8944574, 0, 0.49346402, -1.2281489, 0.8315499, 1.8588717)
+use_collision = true
+size = Vector3(0.29589844, 1, 1)
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="." unique_id=2012486780]
+transform = Transform3D(1.9897008, 0, 0.22183363, 0, 3.074225, 0, -0.8944574, 0, 0.49346402, -1.2281489, 0.458457, 2.1906917)
+use_collision = true
+size = Vector3(0.29589844, 1, 1)
+
+[node name="CSGBox3D6" type="CSGBox3D" parent="." unique_id=1817944389]
+transform = Transform3D(1.9897008, 0, 0.22183363, 0, 3.074225, 0, -0.8944574, 0, 0.49346402, -1.2281489, 0.111099005, 2.5486426)
+use_collision = true
+size = Vector3(0.29589844, 1, 1)
+
+[node name="CSGBox3D7" type="CSGBox3D" parent="." unique_id=1469914532]
+transform = Transform3D(1.9897008, 0, 0.22183363, 0, 3.074225, 0, -0.8944574, 0, 0.49346402, -1.2281489, -0.27567577, 2.801038)
+use_collision = true
+size = Vector3(0.29589844, 1, 1)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=836108822]
+transform = Transform3D(1, 0, 0, 0, 0.3511718, 0.9363111, 0, -0.9363111, 0.3511718, 0, 14.822151, 8.803192)
+light_color = Color(1, 0.909796, 0.86307746, 1)
+shadow_enabled = true
+shadow_bias = 0.199
+shadow_normal_bias = 2.297
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="." unique_id=64376357]
+use_collision = true
+size = Vector3(200, 1, 200)
 
 [connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]

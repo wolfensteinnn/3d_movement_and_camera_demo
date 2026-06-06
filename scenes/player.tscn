@@ -1256,6 +1256,8 @@ height = 0.18
 
 [node name="Player" type="CharacterBody3D" unique_id=1776387509]
 collision_mask = 3
+floor_max_angle = 0.9075712
+floor_snap_length = 0.3
 script = ExtResource("1_qhqgy")
 
 [node name="duck" type="Node3D" parent="." unique_id=313610452]
@@ -1370,12 +1372,3 @@ transform = Transform3D(1, 0, 0, 0, -0.9999697, 0.0077842004, 0, -0.0077842004, 
 light_energy = 0.08
 spot_range = 1.0282757
 spot_angle = 45.309982
-
-[node name="RayCast3D" type="RayCast3D" parent="." unique_id=1869256851]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.3)
-target_position = Vector3(0, -0.2, 0)
-debug_shape_custom_color = Color(0.8413356, 1.347661e-06, 0.4880334, 1)
-
-[node name="GrabCast" type="RayCast3D" parent="." unique_id=341709708]
-transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0.05, 0)
-target_position = Vector3(0, 0, 1)
