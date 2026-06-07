@@ -1,6 +1,6 @@
 extends Node3D
 
-const NET_TESTING = false
+const NET_TESTING = true
 const ENET_PORT = 7777
 
 var lobby_id: int = 0
@@ -92,7 +92,6 @@ func _on_lobby_created(result: int, lobby_id: int) -> void:
 	steam_peer.create_host()
 	peer = steam_peer
 	_setup_as_host()
-	print(lobby_id)
 
 func _on_lobby_joined(lobby_id: int, permissions: int, locked: bool, response: int) -> void:
 	if not is_joining:
