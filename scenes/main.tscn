@@ -67,7 +67,6 @@ text = "join
 "
 
 [node name="LineEdit" type="LineEdit" parent="." unique_id=2140844011]
-visible = false
 offset_top = 190.0
 offset_right = 205.0
 offset_bottom = 221.0

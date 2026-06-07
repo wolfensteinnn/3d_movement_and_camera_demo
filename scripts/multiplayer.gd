@@ -1,6 +1,6 @@
 extends Node3D
 
-const NET_TESTING = false
+const NET_TESTING = true
 const ENET_PORT = 7777
 
 var lobby_id: int = 0
