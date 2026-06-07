@@ -217,6 +217,8 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
+		if name.to_int() != multiplayer.get_unique_id():
+			return
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and get_window().has_focus():
 			target_rotation_x += event.relative.y * MOUSE_SENSITIVITY
 			target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
@@ -454,8 +456,10 @@ func _try_grab() -> void:
 	if grab_cast.is_colliding():
 		var hold_target = grab_cast.get_collider()
 		if hold_target is CharacterBody3D and hold_target != self:
+			if hold_target.is_held:
+				rpc_id(hold_target.holder_authority, "force_release_held")
 			held_player = hold_target
-			held_player_original_authority = held_player.get_multiplayer_authority()
+			held_player_original_authority = hold_target.name.to_int()
 			held_player.set_multiplayer_authority((get_multiplayer_authority()))
 			held_player.rpc("set_held", true, get_multiplayer_authority())
 
@@ -468,6 +472,11 @@ func set_held(held: bool, holder_id: int) -> void:
 		set_multiplayer_authority(name.to_int())
 	else:
 		set_multiplayer_authority(holder_id)
+
+@rpc("any_peer", "reliable")
+func force_release_held() -> void:
+	held_player = null
+	throw_charge = 0.0
 
 func _throw_player() -> void:
 	if held_player == null:
@@ -487,7 +496,12 @@ func sync_look_rotation(rot_x: float, rot_y: float) -> void:
 	target_rotation_y = rot_y
 
 func _update_held_player() -> void:
-	if held_player == null or not held_player.is_multiplayer_authority():
+	if held_player == null:
+		return
+	if held_player.get_multiplayer_authority() != get_multiplayer_authority():
+		held_player = null
+		return
+	if not held_player.is_multiplayer_authority():
 		return
 	var hold_position = global_position + (global_basis.z * 0.1)
 	hold_position.y = global_position.y + 0.2
