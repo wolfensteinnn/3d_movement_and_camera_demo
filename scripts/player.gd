@@ -222,7 +222,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
 			target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
 			if is_held:  # only bother broadcasting when held, normally sync handles it
-				rpc("sync_look_rotation", target_rotation_x, target_rotation_y)
+				rpc("sync_look_rotation", target_rotation_x, target_rotation_y, self)
 		return
 	if !is_multiplayer_authority():
 		return
@@ -482,9 +482,9 @@ func _throw_player() -> void:
 	held_player = null
 
 @rpc("any_peer", "unreliable")
-func sync_look_rotation(rot_x: float, rot_y: float) -> void:
-	target_rotation_x = rot_x
-	target_rotation_y = rot_y
+func sync_look_rotation(rot_x: float, rot_y: float, player: CharacterBody3D) -> void:
+	player.target_rotation_x = rot_x
+	player.target_rotation_y = rot_y
 
 func _update_held_player() -> void:
 	if held_player == null or not held_player.is_multiplayer_authority():
