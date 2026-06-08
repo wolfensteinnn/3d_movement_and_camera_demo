@@ -179,6 +179,7 @@ var is_held: bool = false
 var holder_authority: int = -1
 @export var grab_range: float = 0.2
 var throw_charge: float = 0.0
+var hold_target_position: Vector3 = Vector3.ZERO
 var max_throw_force: float = 100.00
 var charge_speed: float = 5.0
 var held_player_original_authority: int = -1
@@ -581,6 +582,12 @@ func _try_mantle() -> Dictionary:
 	return { "position": ledge_hit.position }
 
 #GRABBING PLAYERS ---------------------------------------------- GRABBING PLAYERS
+
+@rpc("any_peer", "reliable")
+func force_release_held() -> void:
+	held_player = null
+	throw_charge = 0.0
+
 func _try_grab() -> void:
 	grab_cast.force_raycast_update()
 
@@ -591,7 +598,6 @@ func _try_grab() -> void:
 				rpc_id(hold_target.holder_authority, "force_release_held")
 			held_player = hold_target
 			held_player_original_authority = hold_target.name.to_int()
-			held_player.set_multiplayer_authority((get_multiplayer_authority()))
 			held_player.rpc("set_held", true, get_multiplayer_authority())
 
 @rpc("any_peer", "reliable")
@@ -600,14 +606,22 @@ func set_held(held: bool, holder_id: int) -> void:
 	holder_authority = holder_id
 	if not held:
 		holder_authority = -1
-		set_multiplayer_authority(name.to_int())
-	else:
-		set_multiplayer_authority(holder_id)
 
-@rpc("any_peer", "reliable")
-func force_release_held() -> void:
-	held_player = null
-	throw_charge = 0.0
+func _update_held_player() -> void:
+	if held_player == null:
+		return
+	if not is_multiplayer_authority():
+		return
+	var hold_position = global_position + (global_basis.z * 0.1)
+	hold_position.y = global_position.y + 0.2
+	held_player.rpc_id(held_player.name.to_int(), "receive_hold_position", hold_position)
+	#held_player.rpc("_move_camera_on_held",held_player_original_authority)
+
+@rpc("any_peer", "unreliable")
+func receive_hold_position(pos: Vector3):
+	if is_held and is_multiplayer_authority():
+		hold_target_position = pos
+		velocity = Vector3.ZERO
 
 func _throw_player() -> void:
 	if held_player == null:
@@ -615,44 +629,30 @@ func _throw_player() -> void:
 	var throw_direction = -camera_main.global_transform.basis.z.normalized()
 	var throw_velocity = throw_direction * throw_charge
 	throw_velocity.y = throw_charge * 0.5
-	held_player.set_multiplayer_authority(held_player_original_authority)
 	held_player.rpc("set_held", false, -1)
-	held_player.rpc("receive_throw", throw_velocity)
+	held_player.rpc_id(held_player.name.to_int(), "receive_throw", throw_velocity)
 	throw_charge = 0.0
 	held_player = null
-
-@rpc("any_peer", "unreliable")
-func sync_look_rotation(rot_x: float, rot_y: float) -> void:
-	target_rotation_x = rot_x
-	target_rotation_y = rot_y
-
-func _update_held_player() -> void:
-	if held_player == null:
-		return
-	if held_player.get_multiplayer_authority() != get_multiplayer_authority():
-		held_player = null
-		return
-	if not held_player.is_multiplayer_authority():
-		return
-	var hold_position = global_position + (global_basis.z * 0.1)
-	hold_position.y = global_position.y + 0.2
-	held_player.global_position = hold_position
-	held_player.velocity = Vector3.ZERO
-	#held_player.rpc("_move_camera_on_held",held_player_original_authority)
 
 @rpc("any_peer", "reliable")
 func receive_throw(throw_velocity: Vector3) -> void:
 	if is_multiplayer_authority():
 		velocity = throw_velocity
 
-@rpc("any_peer","reliable")
-func _move_camera_on_held(delta):
-	velocity = Vector3.ZERO
-	rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-	camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-	camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
-	move_and_slide()
-	_update_bob(delta)
+func _update_throw(delta):
+		
+	if Input.is_action_just_pressed("grab") and held_player == null:
+		_try_grab()
+
+	if Input.is_action_pressed("climb") and held_player != null:
+		throw_charge = min(throw_charge + charge_speed * delta, max_throw_force)
+
+	if Input.is_action_just_released("climb") and held_player != null:
+		_throw_player()
+
+	if held_player != null:
+		_update_held_player()
+
 	
 func _handle_falling(delta: float):
 	if not is_on_floor() and not is_climbing and not is_mantling:
@@ -683,16 +683,20 @@ func _handle_falling(delta: float):
 	
 func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
-		if is_held:
-			velocity = Vector3.ZERO
-			rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-			camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-			camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
-			move_and_slide()
-			_update_bob(delta)
 		return
-		
-
+	
+	if is_held:
+		velocity = Vector3.ZERO
+		rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+		global_position = global_position.lerp(hold_target_position, 8.0 * delta)
+		camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+		camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+		_update_bob(delta)
+		if held_player != null:
+			_update_held_player()
+			_update_throw(delta)
+		return
+	
 	#RAGDOLL
 	if is_ragdoll:
 		ragdoll_timer += delta
@@ -927,17 +931,7 @@ func _physics_process(delta: float) -> void:
 			_stop_climb()
 
 	# THROW
-	if Input.is_action_just_pressed("grab") and held_player == null:
-		_try_grab()
-
-	if Input.is_action_pressed("climb") and held_player != null:
-		throw_charge = min(throw_charge + charge_speed * delta, max_throw_force)
-
-	if Input.is_action_just_released("climb") and held_player != null:
-		_throw_player()
-
-	if held_player != null:
-		_update_held_player()
+	_update_throw(delta)
 
 func _update_camera_clip() -> void:
 	var space = get_world_3d().direct_space_state

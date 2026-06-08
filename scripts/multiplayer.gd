@@ -92,6 +92,7 @@ func _on_lobby_created(result: int, lobby_id: int) -> void:
 	steam_peer.create_host()
 	peer = steam_peer
 	_setup_as_host()
+	print(lobby_id)
 
 func _on_lobby_joined(lobby_id: int, permissions: int, locked: bool, response: int) -> void:
 	if not is_joining:
