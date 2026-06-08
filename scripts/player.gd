@@ -262,7 +262,7 @@ func _ready() -> void:
 	if is_multiplayer_authority():
 		#animation_player.play("run")
 		global_position = initial_transform
-		camera_main.current = true
+		#camera_main.current = true
 		camera_main.set_cull_mask_value(2, false)
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		for any in meshes.get_children():
@@ -367,7 +367,6 @@ func _stop_ragdoll() -> void:
 	collision_ragdoll.angular_velocity = Vector3.ZERO
 	collision_ragdoll.freeze = true
 	collision_ragdoll.top_level = false
-	collision_ragdoll.position = Vector3(0, -999, 0)
 	collision_normal.disabled = false
 	velocity = Vector3.ZERO
 	global_position = recovery_pos
@@ -687,10 +686,7 @@ func _physics_process(delta: float) -> void:
 	
 	if is_held:
 		velocity = Vector3.ZERO
-		rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-		global_position = global_position.lerp(hold_target_position, 8.0 * delta)
-		camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-		camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+		_handle_camera_mount_rotation(delta)
 		_update_bob(delta)
 		if held_player != null:
 			_update_held_player()
