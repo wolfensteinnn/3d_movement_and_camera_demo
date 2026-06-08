@@ -1,0 +1,287 @@
+[gd_scene format=3 uid="uid://cnaxcfibm3xf8"]
+
+[ext_resource type="PackedScene" uid="uid://f8xayu7qvbjy" path="res://examples/wigglebone/palm/palm.gltf" id="1_agxe0"]
+[ext_resource type="Script" uid="uid://6fgx73tctu5v" path="res://addons/wigglebone/wiggle_rotation_modifier_3d.gd" id="2_tjql0"]
+[ext_resource type="Resource" uid="uid://cwabaw2vr7rl" path="res://examples/wigglebone/palm/trunk.tres" id="3_3ngce"]
+[ext_resource type="Resource" uid="uid://w6m3ec6wrn42" path="res://examples/wigglebone/palm/leave.tres" id="4_12oac"]
+
+[sub_resource type="Animation" id="Animation_xchah"]
+length = 0.001
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Armature/Skeleton3D/ModifierTrunk:force_global")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_q2f7y"]
+resource_name = "move"
+length = 2.0
+loop_mode = 1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Armature/Skeleton3D/ModifierTrunk:force_global")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.7, 1, 1.7),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(-8, 0, 8), Vector3(8, 0, -8), Vector3(-8, 0, 8)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_g66f6"]
+_data = {
+&"RESET": SubResource("Animation_xchah"),
+&"move": SubResource("Animation_q2f7y")
+}
+
+[node name="Palm" unique_id=1829980025 instance=ExtResource("1_agxe0")]
+
+[node name="Skeleton3D" parent="Armature" parent_id_path=PackedInt32Array(465047298) index="0" unique_id=2031111558]
+bones/5/rotation = Quaternion(0.619893, -0.557946, -0.533385, -0.141169)
+bones/5/scale = Vector3(1, 1, 1)
+bones/6/rotation = Quaternion(0.479159, 0.63294, 0.598154, -0.10957)
+bones/6/scale = Vector3(1, 1, 1)
+bones/7/rotation = Quaternion(-0.761246, 0.140111, 0.137308, 0.618078)
+bones/7/scale = Vector3(1, 1, 1)
+bones/8/rotation = Quaternion(0.710528, 0.364512, 0.348686, -0.490611)
+bones/8/scale = Vector3(1, 1, 1)
+bones/9/rotation = Quaternion(-0.668423, -0.16447, -0.165336, 0.706276)
+bones/10/rotation = Quaternion(0.648663, -0.432408, -0.422444, -0.462385)
+bones/11/scale = Vector3(1, 1, 1)
+bones/12/scale = Vector3(1, 1, 1)
+bones/13/rotation = Quaternion(0.721176, 0.329056, 0.327101, 0.514425)
+bones/13/scale = Vector3(1, 1, 1)
+
+[node name="ModifierTrunk" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="2" unique_id=1637903380]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(0.97748077, -0.2098195, 0.022519223, 0.2098195, 0.95496154, -0.2098195, 0.022519223, 0.2098195, 0.97748077, 0, 2.378198, 0)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "trunk.004"
+properties = ExtResource("3_3ngce")
+handle_distance = 1.5
+
+[node name="ModifierLeave0" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="3" unique_id=522313978]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(-0.09219009, -0.74307704, -0.66282547, -0.38516715, -0.5872319, 0.7119024, -0.91823053, 0.3209289, -0.23207194, -0.30736914, 3.5233138, 0.21842115)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave.000"
+properties = ExtResource("4_12oac")
+handle_distance = 1.0
+
+[node name="ModifierLeave1" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="4" unique_id=708972857]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(0.90278167, -0.35347933, -0.24502559, 0.23225239, -0.07883942, 0.9694551, -0.36200008, -0.9321142, 0.010921642, -0.30287158, 3.5028436, 0.21392357)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave.001"
+properties = ExtResource("4_12oac")
+handle_distance = 0.5
+
+[node name="ModifierLeave2" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="5" unique_id=1263026706]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(-0.75653034, -0.6430568, 0.11891141, 0.3024941, -0.1828946, 0.93543947, -0.57979244, 0.74365824, 0.33288613, -0.31412333, 3.7707756, 0.3419971)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave.002"
+properties = ExtResource("4_12oac")
+handle_distance = 0.5
+
+[node name="ModifierLeave3" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="6" unique_id=724827268]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(-0.5888967, 0.7723814, 0.23796478, 0.19625264, -0.14896296, 0.9691723, 0.7840187, 0.6174438, -0.06385802, -0.29382873, 3.4616866, 0.20488071)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave.003"
+properties = ExtResource("4_12oac")
+handle_distance = 0.5
+
+[node name="ModifierLeave4" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="7" unique_id=1905390427]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(0.38943598, 0.20985547, 0.8968279, 0.8661439, -0.41460964, -0.27909434, 0.31326395, 0.88547134, -0.34322894, -0.28529605, 3.7981668, 0.3612729)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave.004"
+properties = ExtResource("4_12oac")
+handle_distance = 0.5
+
+[node name="ModifierLeave5" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="8" unique_id=782999092]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(0.4623542, 0.88384086, -0.07109077, 0.09196377, 0.03194373, 0.99525, 0.88191336, -0.46669582, -0.06651211, -0.28529605, 3.7981668, 0.3612729)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave.005"
+properties = ExtResource("4_12oac")
+handle_distance = 0.5
+
+[node name="ModifierLeave6" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="9" unique_id=790758070]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(0.8842359, 0.4123097, -0.2193798, 0.07881637, 0.33125195, 0.94024473, 0.460342, -0.84868896, 0.2604081, -0.32972404, 3.7880778, 0.24764791)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave.006"
+properties = ExtResource("4_12oac")
+handle_distance = 0.5
+
+[node name="ModifierLeave7" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="10" unique_id=1896448269]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(-0.26251066, 0.89617866, -0.35770383, -0.42011476, 0.2275754, 0.878472, 0.86867243, 0.3808849, 0.3167569, -0.26224333, 3.7996125, 0.26262963)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave.007"
+properties = ExtResource("4_12oac")
+handle_distance = 0.5
+
+[node name="ModifierLeave8" type="SkeletonModifier3D" parent="Armature/Skeleton3D" index="11" unique_id=2052680913]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(0.27745557, -0.89385176, -0.35220355, 0.09272156, -0.33997232, 0.93585336, -0.95625365, -0.2923146, -0.011447921, -0.36269063, 3.7751012, 0.27374265)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_tjql0")
+bone_name = "leave"
+properties = ExtResource("4_12oac")
+handle_distance = 0.5
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." index="1" unique_id=245812978]
+libraries/ = SubResource("AnimationLibrary_g66f6")

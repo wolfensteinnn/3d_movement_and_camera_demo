@@ -17,6 +17,7 @@ var camera_smooth_pos: Vector3 = Vector3.ZERO
 const LOOK_SMOOTHING = 17.0
 const MOUSE_SENSITIVITY = 0.002
 const EYE_HEIGHT = 0.111
+const EYE_HEIGHT_RAGDOLL = 0.088
 const EYE_HEIGHT_LANDING_DIP = 0.009
 var eye_height_current: float = 0.111
 
@@ -181,7 +182,6 @@ var throw_charge: float = 0.0
 var max_throw_force: float = 100.00
 var charge_speed: float = 5.0
 var held_player_original_authority: int = -1
-var is_thrown: bool = false
 
 # LOOK TARGETS
 var target_rotation_y: float = 0.0
@@ -200,15 +200,37 @@ var ragdoll_timer: float = 0.0
 var ragdoll_recovery_timer: float = 0.0
 var pre_impact_velocity: Vector3 = Vector3.ZERO
 
+# RAGDOLL DIP ANIMATION
+var ragdoll_landing_dip_rotation: float = 0.0
+var ragdoll_landing_fov_dip: float = 0.0
+var ragdoll_eye_dip: float = 0.0
+
+# RAGDOLL ANIMATION RECOVERY  
+const RECOVERY_EYE_LEVEL = -0.08
+const RECOVERY_FOV_DIP = 20           
+const RECOVERY_EYE_HEIGHT_SPEED = 2.8
+const RECOVERY_FOV_SPEED = 1.4          # max speed at end of ease
+const RECOVERY_DURATION = 0.58           # input-blocked phase
+const RECOVERY_LINGER_DURATION = 4.6     # free phase, animation tail
+
+var recovery_fov_dip: float = 0.0
+var is_recovering: bool = false
+var recovery_timer: float = 0.0
+var recovery_tilt_x: float = 0.0
+var recovery_tilt_z: float = 0.0
+var recovery_linger: bool = false
+var recovery_linger_timer: float = 0.0
+
 @onready var collision_normal: CollisionShape3D = $CollisionShape3D
 @onready var collision_ragdoll: RigidBody3D = $Ragdoll
+
+@onready var animation_player: AnimationPlayer = $duck/AnimationPlayer
 
 #DEBUG
 var prev_pos: Vector3
 
 func _is_climbable_normal(n: Vector3) -> bool:
 	return n.y < CLIMB_FLOOR_THRESHOLD and n.y > CLIMB_CEIL_THRESHOLD
-
 
 func _set_cursor(a_cursor):
 	cursor = a_cursor
@@ -237,12 +259,13 @@ func _ready() -> void:
 	camera_smooth_pos = global_position
 	velocity = Vector3.ZERO
 	if is_multiplayer_authority():
+		#animation_player.play("run")
 		global_position = initial_transform
 		camera_main.current = true
 		camera_main.set_cull_mask_value(2, false)
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		for any in meshes.get_children():
-			if any is PhysicalBoneSimulator3D:
+			if any is not MeshInstance3D:
 				continue
 			any.set_layer_mask_value(1, false)
 			any.set_layer_mask_value(2, true)
@@ -266,7 +289,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if name.to_int() != multiplayer.get_unique_id():
 			return
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and get_window().has_focus():
-			if not is_ragdoll and ragdoll_smoothing_timer <= 0:
+			if not is_ragdoll and ragdoll_recovery_timer <= 0:
 				target_rotation_x += event.relative.y * MOUSE_SENSITIVITY
 				target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
 				target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
@@ -309,6 +332,12 @@ func _maintain_climb() -> Dictionary:
 	return space_state.intersect_ray(query)
 
 func _start_ragdoll() -> void:
+	var impact_speed = abs(pre_impact_velocity.y)
+	var dip_strength = 2.8
+	ragdoll_landing_dip_rotation = LANDING_DIP_ROT_STRENGTH * dip_strength
+	ragdoll_landing_fov_dip = LANDING_FOV_DIP_STRENGTH * dip_strength
+	ragdoll_eye_dip = 0.8
+	
 	is_ragdoll = true
 	ragdoll_timer = 0.0
 	ragdoll_recovery_timer = -1.0
@@ -317,14 +346,21 @@ func _start_ragdoll() -> void:
 	collision_ragdoll.global_position = global_position
 	collision_ragdoll.freeze = false
 	
-	collision_ragdoll.linear_velocity = pre_impact_velocity * -0.08
+	collision_ragdoll.linear_velocity = pre_impact_velocity
 	is_climbing = false
 	is_mantling = false
 	is_climb_attaching = false
 	climb_reacquire_timer = RAGDOLL_MIN_DURATION + RAGDOLL_RECOVERY_TIME + 0.2
 
 func _stop_ragdoll() -> void:
+	climb_tilt = 0.0
+	climb_camera_tilt = 0.0
+	climb_camera_tilt_target = 0.0
+	mantle_camera_tilt = 0.0
+	mantle_camera_tilt_target = -0.05
+	
 	var recovery_pos = collision_ragdoll.global_position
+	
 	is_ragdoll = false
 	collision_ragdoll.linear_velocity = Vector3.ZERO
 	collision_ragdoll.angular_velocity = Vector3.ZERO
@@ -335,20 +371,21 @@ func _stop_ragdoll() -> void:
 	velocity = Vector3.ZERO
 	global_position = recovery_pos
 	prev_pos = recovery_pos
-	var forward = collision_ragdoll.global_transform.basis.z
-	forward.y = 0.0
-	forward = forward.normalized()
-	target_rotation_y = atan2(forward.x, forward.z)
-	target_rotation_x = camera_mount.rotation.x 
-	rotation = Vector3(0, target_rotation_y, 0)
+	
+	target_rotation_x = 0.0
 	landing_dip_rotation = 0.0
 	landing_fov_dip = 0.0
-	eye_height_current = EYE_HEIGHT
-	#camera_mount.rotation.x = target_rotation_x
-	#camera_mount.rotation.y = 0.0
+	eye_height_current = RECOVERY_EYE_LEVEL
+	recovery_fov_dip = RECOVERY_FOV_DIP
+	is_recovering = true
+	recovery_timer = RECOVERY_DURATION
 	ragdoll_timer = 0.0
 	ragdoll_recovery_timer = -1.0
-	ragdoll_smoothing_timer = RAGDOLL_SMOOTHING_TIMER
+	ragdoll_smoothing_timer = RAGDOLL_SMOOTHING_TIMER 
+	
+	recovery_tilt_x = camera_mount.rotation.x
+	recovery_tilt_z = camera_mount.rotation.z
+	rotation = Vector3(0.0, target_rotation_y, 0.0)
 
 func _start_climb() -> void:
 	camera_smooth_pos = global_position  # NEEDED FOR A SNAP TO BE MORE SNAPPY 
@@ -606,7 +643,6 @@ func _update_held_player() -> void:
 @rpc("any_peer", "reliable")
 func receive_throw(throw_velocity: Vector3) -> void:
 	if is_multiplayer_authority():
-		is_thrown = true
 		velocity = throw_velocity
 
 @rpc("any_peer","reliable")
@@ -627,11 +663,10 @@ func _handle_falling(delta: float):
 		if is_falling:
 			pre_impact_velocity = velocity
 			fall_distance = fall_start_y - global_position.y
-			print(fall_distance)
 			if fall_distance > RAGDOLL_FALL_THRESHOLD:
 				_start_ragdoll()
-			if fall_distance > 0.023:
-				var dip_strength = clamp(fall_distance / 1.5, 0.3, 4.8) #from 30% to 180% roughly
+			if fall_distance > 0.014:
+				var dip_strength = clamp(fall_distance / 1.5, 0.96, 4.8) #from 30% to 180% roughly
 				landing_dip_rotation = LANDING_DIP_ROT_STRENGTH * dip_strength
 				landing_fov_dip = LANDING_FOV_DIP_STRENGTH * dip_strength
 				eye_height_current -= EYE_HEIGHT_LANDING_DIP * dip_strength
@@ -656,8 +691,8 @@ func _physics_process(delta: float) -> void:
 			move_and_slide()
 			_update_bob(delta)
 		return
-	
-	
+		
+
 	#RAGDOLL
 	if is_ragdoll:
 		ragdoll_timer += delta
@@ -665,6 +700,7 @@ func _physics_process(delta: float) -> void:
 		global_position = collision_ragdoll.global_position
 		rotation = collision_ragdoll.rotation
 		_update_camera_ragdoll(delta)
+
 
 		if ragdoll_timer >= RAGDOLL_MIN_DURATION:
 			if Vector2(spd.x, spd.z).length() < RAGDOLL_SETTLE_SPEED and abs(spd.y) < RAGDOLL_SETTLE_SPEED:
@@ -681,35 +717,29 @@ func _physics_process(delta: float) -> void:
 	
 	if ragdoll_smoothing_timer > 0.0:
 		ragdoll_smoothing_timer -= delta
-	
-	
-	var target_fov = (FOV_SPRINT if is_sprinting else (FOV_CLIMB if is_climbing else FOV_DEFAULT)) - landing_fov_dip
+
+	var target_fov = (FOV_SPRINT if is_sprinting else (FOV_CLIMB if is_climbing else FOV_DEFAULT)) - landing_fov_dip - recovery_fov_dip
 	landing_fov_dip = lerp(landing_fov_dip, 0.0, LANDING_FOV_DIP_SPEED * delta)
 	camera_main.fov = lerp(camera_main.fov, target_fov, FOV_LERP_SPEED * delta)
 
-	#DEBUG SPEED
-	var pos_delta = global_position - prev_pos
-	if is_instance_valid(debug_velocity):
-		debug_velocity.text = "spd: %.3f | vy: %.3f | accel: %.3f | boost: %.3f | sprint: %s | jumpsprnt: %s | posdelta: %.4f" % [
-			Vector2(velocity.x, velocity.z).length(),
-			velocity.y,
-			accel,
-			momentum_boost,
-			str(is_sprinting),
-			str(jumped_while_sprinting),
-			Vector2(pos_delta.x, pos_delta.z).length()
-		]
-	prev_pos = global_position
 	
-	if is_climbing:
-		var target_wall_facing = atan2(climb_wall_normal.x, climb_wall_normal.z) + PI
-		rotation.y = lerp_angle(rotation.y, target_wall_facing, 8.0 * delta)
-		camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING  * delta)
-		camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
-	else:
-		rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-		camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
-		camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+	var ease_t = _get_recovery_ease_t()
+
+	if is_recovering:
+		recovery_timer -= delta
+		recovery_fov_dip = lerp(recovery_fov_dip, 0.0, RECOVERY_FOV_SPEED * ease_t * delta)
+		if recovery_timer <= 0.0:
+			is_recovering = false
+			recovery_linger = true
+			recovery_linger_timer = RECOVERY_LINGER_DURATION
+
+	if recovery_linger:
+		recovery_linger_timer -= delta
+		recovery_fov_dip = lerp(recovery_fov_dip, 0.0, RECOVERY_FOV_SPEED * ease_t * delta)
+		if recovery_linger_timer <= 0.0:
+			recovery_linger = false
+	
+	_handle_camera_mount_rotation(delta)
 
 	# Gravity
 	if not is_on_floor() and not is_climbing:
@@ -762,24 +792,6 @@ func _physics_process(delta: float) -> void:
 		stamina = max(stamina - STAMINA_SPRINT_COST * delta, 0.0)
 		stamina_regen_timer = STAMINA_REGEN_DELAY
 	
-	#CAMERA TILT HORIZONTAL
-	var horizontal_input = Input.get_axis("move_right", "move_left")
-	climb_tilt = lerp(climb_tilt, horizontal_input * CLIMB_TILT_STRENGTH if is_climbing else 0.0, CLIMB_TILT_SPEED * delta)
-	camera_mount.rotation.z = climb_tilt
-	
-	#CAMERA TILT VERTICAL
-	landing_dip_rotation = lerp(landing_dip_rotation, 0.0, LANDING_DIP_ROT_SPEED * delta)
-	var tilt_target: float = CLIMB_CAMERA_TILT_TARGET if is_climbing else 0.0
-	if camera_attach_smooth_timer > 0.0:
-		climb_camera_tilt_target = lerp(climb_camera_tilt_target, tilt_target, CLIMB_CAMERA_TILT_ROT * delta)
-	else:
-		climb_camera_tilt_target = lerp(climb_camera_tilt_target, tilt_target, CLIMB_CAMERA_TILT_SPEED * delta)
-	climb_camera_tilt = lerp(climb_camera_tilt, climb_camera_tilt_target, 12.0 * delta)
-	mantle_camera_tilt_target = lerp(mantle_camera_tilt_target, 0.0 if not is_mantling else -0.05, 3.0 * delta)
-	mantle_camera_tilt = lerp(mantle_camera_tilt, mantle_camera_tilt_target, 6.0 * delta)
-	var attach_t = 1.0 - clamp(camera_attach_smooth_timer / CAMERA_ATTACH_SMOOTH_DURATION, 0.0, 1.0)
-	var tilt_speed = lerp(8.0, LOOK_SMOOTHING, attach_t)
-	camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x + climb_camera_tilt + landing_dip_rotation + mantle_camera_tilt, tilt_speed * delta)
 
 	if is_climbing:
 		
@@ -838,19 +850,18 @@ func _physics_process(delta: float) -> void:
 					climb_reacquire_timer = MANTLE_DURATION + 0.4  # outlast the mantle
 					_stop_climb()
 
-	elif not is_thrown:
-		var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
-		var target_accel = ACCELERATION if is_on_floor() else current_air_accel
-		var target_decel = DECELERATION if is_on_floor() else AIR_FRICTION
-		accel = lerp(accel, target_accel, 12.0 * delta)
-		decel = lerp(decel, target_decel, 12.0 * delta)
-		momentum_boost = lerp(momentum_boost, 1.0, 2.6 * delta)
-		if direction:
-			velocity.x = move_toward(velocity.x, direction.x * speed_target * momentum_boost, accel * delta)
-			velocity.z = move_toward(velocity.z, direction.z * speed_target * momentum_boost, accel * delta)
-		else:
-			velocity.x = move_toward(velocity.x, 0, decel * delta)
-			velocity.z = move_toward(velocity.z, 0, decel * delta)
+	var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
+	var target_accel = ACCELERATION if is_on_floor() else current_air_accel
+	var target_decel = DECELERATION if is_on_floor() else AIR_FRICTION
+	accel = lerp(accel, target_accel, 12.0 * delta)
+	decel = lerp(decel, target_decel, 12.0 * delta)
+	momentum_boost = lerp(momentum_boost, 1.0, 2.6 * delta)
+	if direction:
+		velocity.x = move_toward(velocity.x, direction.x * speed_target * momentum_boost, accel * delta)
+		velocity.z = move_toward(velocity.z, direction.z * speed_target * momentum_boost, accel * delta)
+	else:
+		velocity.x = move_toward(velocity.x, 0, decel * delta)
+		velocity.z = move_toward(velocity.z, 0, decel * delta)
 	
 	if is_mantling:
 		mantle_timer -= delta
@@ -861,9 +872,7 @@ func _physics_process(delta: float) -> void:
 		if mantle_timer <= 0.0:
 			is_mantling = false
 			mantle_reacquire_timer = MANTLE_REACQUIRE_COOLDOWN
-	
-	if is_thrown and is_on_floor():
-		is_thrown = false
+
 
 	_update_bob(delta)
 	move_and_slide()
@@ -941,14 +950,64 @@ func _update_camera_clip() -> void:
 	if hit and hit.normal.y < 0.629:  # ignore floors
 		camera_main.global_position = hit.position + hit.normal * 0.05
 
-
 func _update_camera_ragdoll(delta: float) -> void:
-	var target_pos = collision_ragdoll.global_position + Vector3(0.0, EYE_HEIGHT, 0.0)
+	_partial_bob_update(delta)
+	
+	var eye_with_dip = EYE_HEIGHT - ragdoll_eye_dip
+	var target_pos = collision_ragdoll.global_position + Vector3(0.0, eye_with_dip, 0.0)
 	camera_smooth_pos = camera_smooth_pos.lerp(target_pos, CAMERA_DEFAULT_SMOOTH_SPEED * delta)
 	camera_mount.global_position = camera_smooth_pos
-	var from_q = Quaternion(camera_mount.basis)
-	var to_q = Quaternion(collision_ragdoll.basis)
-	camera_mount.basis = Basis(from_q.slerp(to_q, LOOK_SMOOTHING * delta))
+	
+	# apply dip rotation on top of ragdoll body rotation
+	var from_q = Quaternion(camera_mount.basis.orthonormalized())
+	var to_q = Quaternion(collision_ragdoll.global_transform.basis.orthonormalized())
+	camera_mount.basis = Basis(from_q.slerp(to_q, LOOK_SMOOTHING * delta)).orthonormalized()
+	camera_mount.rotation.x += ragdoll_landing_dip_rotation
+
+func _handle_camera_mount_rotation(delta: float):
+	if is_recovering:
+		var tilt_speed = 5.0 / RECOVERY_DURATION
+		recovery_tilt_x = lerp(recovery_tilt_x, 0.0, tilt_speed * delta)
+		recovery_tilt_z = lerp(recovery_tilt_z, 0.0, tilt_speed * delta)
+		camera_mount.rotation.x = recovery_tilt_x
+		camera_mount.rotation.z = recovery_tilt_z
+		camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+		rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+	else:
+		if is_climbing:
+			var target_wall_facing = atan2(climb_wall_normal.x, climb_wall_normal.z) + PI
+			rotation.y = lerp_angle(rotation.y, target_wall_facing, 8.0 * delta)
+			camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+		else:
+			rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			camera_mount.rotation.y = lerp_angle(camera_mount.rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+			camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x, LOOK_SMOOTHING * delta)
+
+		var horizontal_input = Input.get_axis("move_right", "move_left")
+		climb_tilt = lerp(climb_tilt, horizontal_input * CLIMB_TILT_STRENGTH if is_climbing else 0.0, CLIMB_TILT_SPEED * delta)
+		camera_mount.rotation.z = climb_tilt
+
+		landing_dip_rotation = lerp(landing_dip_rotation, 0.0, LANDING_DIP_ROT_SPEED * delta)
+		var tilt_target: float = CLIMB_CAMERA_TILT_TARGET if is_climbing else 0.0
+		if camera_attach_smooth_timer > 0.0:
+			climb_camera_tilt_target = lerp(climb_camera_tilt_target, tilt_target, CLIMB_CAMERA_TILT_ROT * delta)
+		else:
+			climb_camera_tilt_target = lerp(climb_camera_tilt_target, tilt_target, CLIMB_CAMERA_TILT_SPEED * delta)
+		climb_camera_tilt = lerp(climb_camera_tilt, climb_camera_tilt_target, 12.0 * delta)
+		mantle_camera_tilt_target = lerp(mantle_camera_tilt_target, 0.0 if not is_mantling else -0.05, 3.0 * delta)
+		mantle_camera_tilt = lerp(mantle_camera_tilt, mantle_camera_tilt_target, 6.0 * delta)
+		var attach_t = 1.0 - clamp(camera_attach_smooth_timer / CAMERA_ATTACH_SMOOTH_DURATION, 0.0, 1.0)
+		var tilt_speed = lerp(8.0, LOOK_SMOOTHING, attach_t)
+		camera_mount.rotation.x = lerp_angle(camera_mount.rotation.x, target_rotation_x + climb_camera_tilt + landing_dip_rotation + mantle_camera_tilt, tilt_speed * delta)
+
+func _partial_bob_update(delta: float) -> void:
+	ragdoll_landing_dip_rotation = lerp(ragdoll_landing_dip_rotation, 0.0, LANDING_DIP_ROT_SPEED * delta)
+	ragdoll_landing_fov_dip = lerp(ragdoll_landing_fov_dip, 0.0, LANDING_FOV_DIP_SPEED * delta)
+	ragdoll_eye_dip = lerp(ragdoll_eye_dip, 0.0, LANDING_DIP_ROT_SPEED * delta)
+
+	var target_fov = FOV_DEFAULT - ragdoll_landing_fov_dip
+	camera_main.fov = lerp(camera_main.fov, target_fov, FOV_LERP_SPEED * delta)
 
 func _update_bob(delta: float) -> void:
 	var horizontal_speed = Vector2(velocity.x, velocity.z).length()
@@ -959,15 +1018,31 @@ func _update_bob(delta: float) -> void:
 		bob_time += delta * BOB_FREQUENCY * horizontal_speed
 		bob_offset_y = sin(bob_time) * BOB_AMPLITUDE_Y * speed_ratio
 		bob_offset_x = cos(bob_time * 0.5) * BOB_AMPLITUDE_X * speed_ratio
-	
-	
+
 	if camera_attach_smooth_timer > 0.0:
 		camera_attach_smooth_timer -= delta
-	
-	eye_height_current = lerp(eye_height_current, EYE_HEIGHT, LANDING_DIP_ROT_SPEED * delta)
+
+	var eye_lerp_speed: float
+	var smooth_speed: float
+
+	if is_recovering or recovery_linger:
+		var ease_t = _get_recovery_ease_t()
+		eye_lerp_speed = RECOVERY_EYE_HEIGHT_SPEED * ease_t
+		smooth_speed = lerp(0.05, CAMERA_DEFAULT_SMOOTH_SPEED, ease_t)
+	else:
+		eye_lerp_speed = LANDING_DIP_ROT_SPEED
+		var raw_t = 1.0 - clamp(camera_attach_smooth_timer / CAMERA_ATTACH_SMOOTH_DURATION, 0.0, 1.0)
+		var t = raw_t * raw_t * raw_t
+		smooth_speed = lerp(CAMERA_ATTACH_SMOOTH_SPEED, CAMERA_DEFAULT_SMOOTH_SPEED, t)
+
+	eye_height_current = lerp(eye_height_current, EYE_HEIGHT, eye_lerp_speed * delta)
 	var target_pos = global_position + Vector3(bob_offset_x, bob_offset_y + eye_height_current, 0.0)
-	var raw_t = 1.0 - clamp(camera_attach_smooth_timer / CAMERA_ATTACH_SMOOTH_DURATION, 0.0, 1.0)
-	var t = raw_t * raw_t * raw_t  # ease-in: fast start, slow end
-	var smooth_speed = lerp(CAMERA_ATTACH_SMOOTH_SPEED, CAMERA_DEFAULT_SMOOTH_SPEED, t)
 	camera_smooth_pos = camera_smooth_pos.lerp(target_pos, smooth_speed * delta)
 	camera_mount.global_position = camera_smooth_pos
+
+#JUST GETS THE EASE-IN extreme curve for animations
+func _get_recovery_ease_t() -> float:
+	var total_time = recovery_timer + recovery_linger_timer
+	var total_duration = RECOVERY_DURATION + RECOVERY_LINGER_DURATION
+	var t = 1.0 - clamp(total_time / total_duration, 0.0, 1.0)
+	return 1.0 - pow(1.0 - t, 2.0)

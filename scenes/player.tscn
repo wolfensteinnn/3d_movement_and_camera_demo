@@ -1,6 +1,11 @@
 [gd_scene format=4 uid="uid://6jb3nmk336sq"]
 
 [ext_resource type="Script" uid="uid://d267vvq31m248" path="res://scripts/player.gd" id="1_qhqgy"]
+[ext_resource type="Script" uid="uid://6fgx73tctu5v" path="res://addons/wigglebone/wiggle_rotation_modifier_3d.gd" id="2_qhqgy"]
+[ext_resource type="Resource" uid="uid://cwabaw2vr7rl" path="res://examples/wigglebone/palm/trunk.tres" id="3_dqkch"]
+[ext_resource type="Resource" uid="uid://o6j4nxk7njex" path="res://examples/wigglebone/rotation/rotation.tres" id="4_dqkch"]
+[ext_resource type="Script" uid="uid://cu7klm6ckjl7c" path="res://addons/wigglebone/wiggle_position_modifier_3d.gd" id="5_tuyoq"]
+[ext_resource type="Resource" uid="uid://dwducfqd5pprg" path="res://examples/wigglebone/position/position.tres" id="6_fjrip"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1tj61"]
 resource_name = "body"
@@ -173,6 +178,9 @@ _surfaces = [{
 "vertex_data": PackedByteArray("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")
 }]
 blend_shape_mode = 0
+
+[sub_resource type="Animation" id="Animation_qhqgy"]
+length = 0.001
 
 [sub_resource type="Animation" id="Animation_pb8en"]
 resource_name = "beakmax"
@@ -353,6 +361,7 @@ tracks/11/keys = PackedFloat32Array(0, 1, -0.69822675, 0.003974554, 0.01041861, 
 [sub_resource type="Animation" id="Animation_f4yuc"]
 resource_name = "climb"
 length = 0.9166667
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -441,6 +450,7 @@ tracks/11/keys = PackedFloat32Array(0, 1, -0.6377137, 0.28912067, 0.29006517, 0.
 [sub_resource type="Animation" id="Animation_o1b0v"]
 resource_name = "idle"
 length = 3.5416667
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -792,6 +802,7 @@ tracks/11/keys = PackedFloat32Array(0, 1, -0.69822675, 0.003974554, 0.01041861, 
 
 [sub_resource type="Animation" id="Animation_4uxdp"]
 resource_name = "run"
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -1141,6 +1152,7 @@ tracks/11/keys = PackedFloat32Array(0, 1, -0.74194735, 0.024240563, 0.051709156,
 [sub_resource type="Animation" id="Animation_r8c7n"]
 resource_name = "sprint"
 length = 0.6666667
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -1228,6 +1240,7 @@ tracks/11/keys = PackedFloat32Array(0, 1, -0.69822675, 0.003974554, 0.01041861, 
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_smehm"]
 _data = {
+&"RESET": SubResource("Animation_qhqgy"),
 &"beakmax": SubResource("Animation_pb8en"),
 &"beaktalk": SubResource("Animation_aa4wu"),
 &"climb": SubResource("Animation_f4yuc"),
@@ -1254,9 +1267,13 @@ properties/1/replication_mode = 1
 radius = 0.09
 height = 0.18
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_3vyb7"]
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_tuyoq"]
+friction = 0.8
+bounce = 0.2
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_tuyoq"]
 radius = 0.08
-height = 0.2
+height = 0.16
 
 [node name="Player" type="CharacterBody3D" unique_id=1776387509]
 collision_mask = 3
@@ -1265,9 +1282,10 @@ floor_snap_length = 0.3
 script = ExtResource("1_qhqgy")
 
 [node name="duck" type="Node3D" parent="." unique_id=313610452]
+transform = Transform3D(0.04, 0, 0, 0, 0.04, 0, 0, 0, 0.04, 0, 0, 0)
 
 [node name="Armature" type="Node3D" parent="duck" unique_id=816338373]
-transform = Transform3D(0.04, 0, 0, 0, 0.04, 0, 0, 0, 0.04, 0.00013715029, 0.010822328, 0.0068484284)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00013715029, 0.010822328, 0.0068484284)
 
 [node name="Skeleton3D" type="Skeleton3D" parent="duck/Armature" unique_id=602322426]
 bones/0/name = "Bone"
@@ -1351,6 +1369,91 @@ skin = SubResource("Skin_g2els")
 mesh = SubResource("ArrayMesh_fjrip")
 skin = SubResource("Skin_g2els")
 
+[node name="ModifierTrunk" type="SkeletonModifier3D" parent="duck/Armature/Skeleton3D" unique_id=1708649165]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(1, 0, 2.3841864e-07, -2.2354167e-09, 0.999956, 0.009376016, -2.3840813e-07, -0.009376016, 0.999956, 2.3283064e-10, 0.99999994, 0.6623134)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_qhqgy")
+bone_name = "heade"
+properties = ExtResource("3_dqkch")
+
+[node name="ModifierTrunk2" type="SkeletonModifier3D" parent="duck/Armature/Skeleton3D" unique_id=156774407]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.6623134)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_qhqgy")
+bone_name = "Bone"
+properties = ExtResource("3_dqkch")
+
+[node name="RotationModifier" type="SkeletonModifier3D" parent="duck/Armature/Skeleton3D" unique_id=1896629042]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(1, 0, 2.3841864e-07, -2.2354167e-09, 0.999956, 0.009376016, -2.3840813e-07, -0.009376016, 0.999956, 2.3283064e-10, 0.99999994, 0.6623134)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("2_qhqgy")
+bone_name = "heade"
+properties = ExtResource("4_dqkch")
+handle_distance = 0.5
+
+[node name="PositionModifier" type="SkeletonModifier3D" parent="duck/Armature/Skeleton3D" unique_id=1340157740]
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+transform = Transform3D(1, 0, 2.3841864e-07, -2.2354167e-09, 0.9999562, 0.009376016, -2.3840813e-07, -0.009376017, 0.999956, 2.3283064e-10, 0.99999994, 0.6623134)
+rotation_edit_mode = 0
+rotation_order = 2
+top_level = false
+visible = true
+visibility_parent = NodePath("")
+active = true
+influence = 1.0
+script = ExtResource("5_tuyoq")
+bone_name = "heade"
+properties = ExtResource("6_fjrip")
+
 [node name="AnimationPlayer" type="AnimationPlayer" parent="duck" unique_id=1841542168]
 libraries/ = SubResource("AnimationLibrary_smehm")
 
@@ -1359,12 +1462,14 @@ replication_config = SubResource("SceneReplicationConfig_qhqgy")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1035750963]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06087277, 0)
+visible = false
 shape = SubResource("CapsuleShape3D_qhqgy")
 debug_color = Color(0, 0.6, 0.69803923, 0.77254903)
 
 [node name="CameraMount" type="Node3D" parent="." unique_id=454960021]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.111, 0)
 top_level = true
+visible = false
 
 [node name="GrabCast" type="RayCast3D" parent="CameraMount" unique_id=2127456308]
 target_position = Vector3(0, 0, 0.2)
@@ -1384,8 +1489,12 @@ spot_angle = 45.309982
 [node name="Ragdoll" type="RigidBody3D" parent="." unique_id=1182676410]
 collision_layer = 4
 collision_mask = 4
+mass = 6.0
+physics_material_override = SubResource("PhysicsMaterial_tuyoq")
+linear_damp = 0.08
+angular_damp = 3.2
 
 [node name="RagdollCol" type="CollisionShape3D" parent="Ragdoll" unique_id=1683870443]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06362592, 0.012749948)
-shape = SubResource("CapsuleShape3D_3vyb7")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.052, 0)
+shape = SubResource("CapsuleShape3D_tuyoq")
 debug_color = Color(0.7921569, 0.6, 0.12941177, 0.41960785)
