@@ -4,4 +4,5 @@
 
 [resource]
 script = ExtResource("1_3njtd")
+force_scale = 1.0
 max_distance = 1.0
