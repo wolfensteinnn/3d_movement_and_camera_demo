@@ -3,8 +3,10 @@ extends CharacterBody3D
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
 @onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
 @onready var grab_cast: RayCast3D = $CameraMount/GrabCast
+@onready var hit_detector: Area3D = $HitDetector
 
 var debug_velocity
+var test_projectile: RigidBody3D = null
 
 #UI
 var stamina_bar
@@ -355,6 +357,7 @@ func _ready() -> void:
 	velocity = Vector3.ZERO
 	if is_multiplayer_authority():
 		#animation_player.play("run")
+		hit_detector.body_entered.connect(_on_hit)
 		global_position = initial_transform
 		camera_main.current = true
 		camera_main.set_cull_mask_value(2, false)
@@ -406,6 +409,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
 		if event.keycode == KEY_R:
 			global_position = Vector3(2,5,2)
+		if event.keycode == KEY_T:
+			_launch_test_projectile()
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
 	#if event is InputEventMouseMotion:
@@ -433,7 +438,19 @@ func _maintain_climb() -> Dictionary:
 	query.exclude = [self]
 	return space_state.intersect_ray(query)
 
-func _start_ragdoll() -> void:
+func _launch_test_projectile():
+	if test_projectile == null:
+		test_projectile = get_tree().get_first_node_in_group("test_projectile")
+	if test_projectile == null:
+		return
+	var spawn = global_position + Vector3(5.0, 0.15, 0.0)
+	var target = global_position
+	target.y = spawn.y
+	var direction = (target - spawn).normalized()
+	test_projectile.global_position = spawn
+	test_projectile.linear_velocity = direction * 8.0
+
+func _start_ragdoll(impulse: Vector3 = Vector3.ZERO) -> void:
 	landing_dip_rotation = 0
 	
 	var impact_speed = abs(pre_impact_velocity.y)
@@ -450,7 +467,10 @@ func _start_ragdoll() -> void:
 	collision_ragdoll.global_position = global_position
 	collision_ragdoll.freeze = false
 	
-	collision_ragdoll.linear_velocity = pre_impact_velocity.limit_length(6.0)
+	if impulse != Vector3.ZERO:
+		collision_ragdoll.linear_velocity = impulse.limit_length(6.0)
+	else:
+		collision_ragdoll.linear_velocity = pre_impact_velocity.limit_length(6.0)
 	just_jumped = false
 	jumped_while_sprinting = false
 	is_falling = false
@@ -501,6 +521,25 @@ func _stop_ragdoll() -> void:
 	rotation = Vector3(0.0, ragdoll_yaw, 0.0)
 	
 	is_recovering = true
+
+func _on_hit(body: Node3D):
+	if not is_multiplayer_authority():
+		return
+	if is_ragdoll or body==self or is_falling:
+		return
+	print("hit by: ", body.name)
+	var hit_velocity := Vector3.ZERO
+	if body is RigidBody3D:
+		hit_velocity = body.linear_velocity
+	elif body is CharacterBody3D:
+		hit_velocity = body.velocity
+	elif body.get_parent() is RigidBody3D:
+		hit_velocity = body.get_parent().linear_velocity
+	if hit_velocity.length() < 2.0:
+		print(hit_velocity, " ", test_projectile.linear_velocity)
+		return
+	_start_ragdoll(hit_velocity)
+
 
 func _start_climb() -> void:
 	camera_smooth_pos = global_position  # NEEDED FOR A SNAP TO BE MORE SNAPPY 
@@ -871,6 +910,8 @@ func _physics_process(delta: float) -> void:
 	
 	if is_held:
 		velocity = Vector3.ZERO
+		rotation.y = lerp_angle(rotation.y, target_rotation_y, LOOK_SMOOTHING * delta)
+		global_position = global_position.lerp(hold_target_position, 8.0 * delta)
 		_handle_camera_mount_rotation(delta)
 		_update_bob(delta)
 		if held_player != null:
