@@ -1,9 +1,15 @@
 extends CharacterBody3D
 @onready var camera_mount: Node3D = $CameraMount
 @onready var camera_main: Camera3D = $CameraMount/Camera3D
-@onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
+@onready var meshes: Skeleton3D = $duck_wholebody_transform/duck/Armature/Skeleton3D
 @onready var grab_cast: RayCast3D = $CameraMount/GrabCast
 @onready var hit_detector: Area3D = $HitDetector
+
+@onready var duck_mesh: Node3D = $duck_wholebody_transform
+
+# MESH ROTATION (CLIMB/HANG)
+const MESH_ROTATION_LERP_SPEED = 0.5
+var mesh_target_basis: Basis = Basis.IDENTITY
 
 var debug_velocity
 var test_projectile: RigidBody3D = null
@@ -73,6 +79,7 @@ var move_input_smooth: Vector2 = Vector2.ZERO  # add with other vars
 const CROUCH_EYE_HEIGHT = 0.04
 const CROUCH_CAMERA_TILT = 0.06
 const CROUCH_CAMERA_TILT_SPEED = 8.0
+const CROUCH_SPEED = 0.3
 var is_crouching: bool = false
 var crouch_tilt: float = 0.0
 var crouch_tilt_velocity: float = 0.0
@@ -86,6 +93,8 @@ var just_jumped: bool = false
 
 # MANTLING
 var is_mantling: bool = false
+var pending_jump_mantle: Vector3 = Vector3.ZERO #for jumping mantles
+var pending_jump_mantle_timer: float = 0.0
 var mantle_timer: float = 0.0
 const MANTLE_DURATION = 0.64        # total time of the mantle
 const MANTLE_LERP_SPEED = 0.16      # lower = floatier, higher = snappier
@@ -96,6 +105,7 @@ const MANTLE_REACQUIRE_COOLDOWN = 0.48
 
 
 # CLIMB INIT
+const CLIMB_MIN_STAMINA_TO_ATTACH = 10.0
 var is_climb_attaching: bool = false
 var climb_attach_timer: float = 0.0
 const CLIMB_ATTACH_DURATION = 0.15
@@ -113,7 +123,7 @@ const CAMERA_ATTACH_SMOOTH_DURATION = 0.72
 const WALL_PROBE_LENGTH = 0.18
 const WALL_PROBE_SPREAD = 0.055
 const WALL_NORMAL_DIVERGENCE_THRESHOLD = 0.85
-const WALL_ACQUISITION_LENGTH = 0.21
+const WALL_ACQUISITION_LENGTH = 0.175
 const WALL_ACQUISITION_VERTICAL_SPREAD = 0.08
 const CLIMB_DETACH_GRACE = 0.4
 const CLIMB_REACQUIRE_COOLDOWN = 0.12
@@ -126,16 +136,28 @@ const WALL_NUDGE_STRENGTH = 0.55
 var prev_wall_normal: Vector3 = Vector3.ZERO
 
 # CLIMBABLE SURFACE ANGLE THRESHOLDS
-# normal.y > CLIMB_FLOOR_THRESHOLD  → too floor-like, reject
-# normal.y < CLIMB_CEIL_THRESHOLD   → too ceiling-like, reject
-# overhangs (negative normal.y) are given a little more leniency
-# than floors so surfaces that aren't walkable can still be climbed
 const CLIMB_FLOOR_THRESHOLD = 0.629   #  DEGREES
 const CLIMB_CEIL_THRESHOLD  = -0.99   # BASSICALLY ANYTHING
 
+# HANGING SYSTEM
+var hanging_bar
+const HANGING_MAX = 1000.0
+var hanging: float = 1000.0
+const HANGING_REGEN_RATE = 18.0
+const HANGING_REGEN_DELAY = 0.6
+var hanging_regen_timer: float = 0.0
+
+const HANGING_DRAIN_MIN = 2.0    # leaning/shallow surface
+const HANGING_DRAIN_MAX = 28.0   # sheer vertical wall
+
+var hang_pitch_velocity: float = 0.0
+var hang_pitch: float = 0.0
+
+var is_hanging: bool = false
+
 # WALL DISTANCE
 # how far the player sits from the wall surface on attach and maintain
-const CLIMB_WALL_OFFSET = 0.045       # offset on _start_climb snap
+const CLIMB_WALL_OFFSET = 0.032       # offset on _start_climb snap
 const CLIMB_MAINTAIN_DEPTH = 0.4     # how deep _maintain_climb casts into wall
 
 # NEW CLIMBING
@@ -146,6 +168,15 @@ var current_wall_normal: Vector3 = Vector3.ZERO
 var is_climbing = false
 var climb_speed: float = 0.22
 var climb_tilt: float = 0.0
+
+# WALL LUNGES
+var wall_lunge_cooldown_timer: float = 0.0
+const WALL_LUNGE_COOLDOWN = 0.35
+const WALL_LUNGE_STAMINA_COST = 16.0
+const WALL_LUNGE_IMPULSE = 1.4
+var wall_lunge_boost: Vector3 = Vector3.ZERO
+const WALL_LUNGE_DECAY = 6.0
+var wall_lunge_triggered: bool = false
 
 # STAMINA
 const STAMINA_MAX = 100.0
@@ -248,18 +279,18 @@ var recovery_linger_timer: float = 0.0
 @onready var collision_ragdoll: RigidBody3D = $Ragdoll
 
 # ANIMATIONS
-@onready var anim_tree: AnimationTree = $duck/AnimationTree
+@onready var anim_tree: AnimationTree = $duck_wholebody_transform/duck/AnimationTree
 
 #DEBUG
 var prev_pos: Vector3
 
 # HANDBONES
-@onready var hand_r: Node3D = $duck/Hand_r
-@onready var hand_l: Node3D = $duck/Hand_l
+@onready var hand_r: Node3D = $duck_wholebody_transform/duck/Hand_r
+@onready var hand_l: Node3D = $duck_wholebody_transform/duck/Hand_l
 
 #BONES MODIFIERS
-@onready var modifier_rotation: DMWBWiggleRotationModifier3D = $duck/Armature/Skeleton3D/modifier_base_head_rotation
-@onready var modifier_eyes_y: BoneRotationModifier3D = $duck/Armature/Skeleton3D/modifier_eyes_y
+@onready var modifier_rotation: DMWBWiggleRotationModifier3D = $duck_wholebody_transform/duck/Armature/Skeleton3D/modifier_base_head_rotation
+@onready var modifier_eyes_y: BoneRotationModifier3D = $duck_wholebody_transform/duck/Armature/Skeleton3D/modifier_eyes_y
 
 
 # IDLE TURN & EYE LOOK
@@ -329,6 +360,9 @@ func _set_cursor_climb():
 func _set_stamina_bar(a_bar):
 	stamina_bar = a_bar
 
+func _set_hanging_bar(a_bar):
+	hanging_bar = a_bar
+
 func _set_debug_velocityLabel(a_label):
 	debug_velocity = a_label
 
@@ -367,8 +401,9 @@ func _ready() -> void:
 				continue
 			#if any.name == "Legs" or any.name == "Legs_001":
 				#continue
-			any.set_layer_mask_value(1, false)
-			any.set_layer_mask_value(2, true)
+			any.cast_shadow = 3 #SETS THE SHADOW CAST ONLY MODE (SO THAT YOU CAN SEE YOUR OWN SHADOW
+			#any.set_layer_mask_value(1, false)
+			#any.set_layer_mask_value(2, true)
 		
 		hand_r.position = Vector3(0.02,0.0,0)
 		hand_l.position = Vector3(-0.02,0.0,0)
@@ -408,7 +443,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_ESCAPE:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
 		if event.keycode == KEY_R:
-			global_position = Vector3(2,5,2)
+			global_position = Vector3(2.7,9,3)
 		if event.keycode == KEY_T:
 			_launch_test_projectile()
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
@@ -422,12 +457,60 @@ func _unhandled_input(event: InputEvent) -> void:
 		jump_buffer_timer = JUMP_BUFFER_TIME
 
 func _update_stamina(delta: float) -> void:
+	if is_climbing:
+		if is_instance_valid(stamina_bar):
+			stamina_bar.value = max(stamina, 0)
+		return
 	if stamina_regen_timer > 0.0:
 		stamina_regen_timer -= delta
 	else:
 		stamina = min(stamina + STAMINA_REGEN_RATE * delta, STAMINA_MAX)
 	if is_instance_valid(stamina_bar):
 		stamina_bar.value = max(stamina, 0)
+
+func _update_hanging(delta: float) -> void:
+	if is_hanging:
+		var drain_rate = _get_hanging_drain_rate(current_wall_normal)
+		hanging = max(hanging - drain_rate * delta, 0.0)
+		if hanging <= 0.0:
+			is_hanging = false
+			if not is_falling:
+				is_falling = true
+				fall_start_y = global_position.y
+			_stop_climb()
+	else:
+		if hanging_regen_timer > 0.0:
+			hanging_regen_timer -= delta
+		else:
+			hanging = min(hanging + HANGING_REGEN_RATE * delta, HANGING_MAX)
+
+	if is_instance_valid(hanging_bar):
+		hanging_bar.value = max(hanging, 0)
+
+func _update_mesh_rotation(delta: float) -> void:
+	var target_pitch: float = 0.0
+
+	if is_climbing and not is_hanging:
+		# Snap to surface like Spiderman
+		target_pitch = climb_wall_normal.y * deg_to_rad(90.0)
+		hang_pitch = duck_mesh.rotation.x  # keep spring in sync so no pop when transitioning
+		hang_pitch_velocity = 0.0
+		duck_mesh.rotation.x = lerp_angle(duck_mesh.rotation.x, target_pitch, MESH_ROTATION_LERP_SPEED * delta)
+
+	elif is_hanging:
+		# Spring-simulated gravity droop
+		var wall_up = climb_wall_normal.cross(Vector3.UP).normalized()
+		var gravity_dot = Vector3.DOWN.dot(wall_up)
+		var gravity_target = gravity_dot * deg_to_rad(90.0)
+		var result = _spring(hang_pitch, gravity_target, hang_pitch_velocity, 18.0, 4.2, delta)
+		hang_pitch = result[0]
+		hang_pitch_velocity = result[1]
+		duck_mesh.rotation.x = hang_pitch
+
+	else:
+		hang_pitch_velocity = 0.0
+		hang_pitch = duck_mesh.rotation.x
+		duck_mesh.rotation.x = lerp_angle(duck_mesh.rotation.x, 0.0, MESH_ROTATION_LERP_SPEED * delta)
 
 func _maintain_climb() -> Dictionary:
 	var space_state = get_world_3d().direct_space_state
@@ -527,7 +610,6 @@ func _on_hit(body: Node3D):
 		return
 	if is_ragdoll or body==self or is_falling:
 		return
-	print("hit by: ", body.name)
 	var hit_velocity := Vector3.ZERO
 	if body is RigidBody3D:
 		hit_velocity = body.linear_velocity
@@ -536,19 +618,34 @@ func _on_hit(body: Node3D):
 	elif body.get_parent() is RigidBody3D:
 		hit_velocity = body.get_parent().linear_velocity
 	if hit_velocity.length() < 2.0:
-		print(hit_velocity, " ", test_projectile.linear_velocity)
 		return
 	_start_ragdoll(hit_velocity)
 
+func _get_climb_speed_modifier() -> float:
+	var t = clamp(stamina / STAMINA_MAX, 0.0, 1.0)
+	var remapped = clamp(t / 0.16, 0.0, 1.0)  # 0→0.16 stamina maps to 0→1
+	return lerp(0.1, 1.0, remapped)
+
+func _get_climb_stamina_drain_modifier() -> float:
+	var t = clamp(stamina / STAMINA_MAX, 0.0, 1.0)
+	var remapped = clamp(t / 0.16, 0.0, 1.0)
+	return lerp(0.04, 1.0, remapped)
+
+func _get_hanging_drain_rate(normal: Vector3) -> float:
+	var steepness = 1.0 - clamp(absf(normal.y) / CLIMB_FLOOR_THRESHOLD, 0.0, 1.0)
+	return lerp(HANGING_DRAIN_MIN, HANGING_DRAIN_MAX, steepness)
 
 func _start_climb() -> void:
+	is_hanging = false
+	hanging = HANGING_MAX
 	camera_smooth_pos = global_position  # NEEDED FOR A SNAP TO BE MORE SNAPPY 
 	is_falling = false
+	just_jumped = false
+	jumped_while_sprinting = false
 	fall_distance = 0.0
 	climb_camera_tilt = 0.16   # push down first
 	climb_camera_tilt_target = CLIMB_CAMERA_TILT_OVERSHOOT  # target is up
 	camera_attach_smooth_timer = CAMERA_ATTACH_SMOOTH_DURATION
-	climb_attach_boost = CLIMB_ATTACH_BOOST_STRENGTH
 	climb_detach_timer = 0.0
 	current_wall_normal = climb_wall_normal
 	_set_cursor_climb()
@@ -564,8 +661,11 @@ func _start_climb() -> void:
 
 func _stop_climb() -> void:
 	is_climbing = false
+	is_hanging = false
 	climb_detach_timer = 0.0
 	climb_reacquire_timer = CLIMB_REACQUIRE_COOLDOWN
+	pending_jump_mantle = Vector3.ZERO  # cancel any pending mantle
+	pending_jump_mantle_timer = 0.0
 
 func _get_wall_manifold() -> Dictionary:
 	var space = get_world_3d().direct_space_state
@@ -653,6 +753,8 @@ func _search_for_wall() -> Dictionary:
 		params.to = global_position + rotated_dir * WALL_PROBE_LENGTH * 3.0
 		var hit = space.intersect_ray(params)
 		if not hit.is_empty() and _is_climbable_normal(hit.normal):
+			if hit.position.y < global_position.y - 0.05:
+				continue
 			var diff = 1.0 - prev_wall_normal.dot(hit.normal)
 			if diff > best_score:
 				best_score = diff
@@ -662,28 +764,26 @@ func _search_for_wall() -> Dictionary:
 
 func _try_acquire_wall() -> Dictionary:
 	var space = get_world_3d().direct_space_state
-	var forward = global_basis.z
-	var origin = global_position
-
-	var probe_origins = [
-		origin,
-		origin + Vector3.UP * WALL_ACQUISITION_VERTICAL_SPREAD,
-		origin - Vector3.UP * WALL_ACQUISITION_VERTICAL_SPREAD,
-	]
-
 	var params = PhysicsRayQueryParameters3D.new()
 	params.exclude = [self]
 	params.collision_mask = 1
-
-	for probe in probe_origins:
-		params.from = probe
-		params.to = probe + forward * WALL_ACQUISITION_LENGTH
-		var hit = space.intersect_ray(params)
-		if not hit.is_empty() and _is_climbable_normal(hit.normal):
-			if is_on_floor() and hit.position.y < global_position.y - 0.05:
-				continue
-			return hit
-	return {}
+	
+	# cast from camera in the direction the player is looking
+	var cam_origin = camera_mount.global_position
+	var cam_forward = camera_mount.global_transform.basis.z
+	
+	params.from = cam_origin
+	params.to = cam_origin + cam_forward * WALL_ACQUISITION_LENGTH
+	var hit = space.intersect_ray(params)
+	
+	if hit.is_empty():
+		return {}
+	if not _is_climbable_normal(hit.normal):
+		return {}
+	if hit.position.y < global_position.y + 0.05:
+		return {}
+	
+	return hit
 
 func _sliding_into_walls_check():
 	if is_on_floor():
@@ -698,7 +798,7 @@ func _sliding_into_walls_check():
 			climb_detach_timer = 0.0
 			break
 
-func _try_mantle() -> Dictionary:
+func _try_mantle(height_tolerance: float = 0.12) -> Dictionary:
 	var space = get_world_3d().direct_space_state
 	var params = PhysicsRayQueryParameters3D.new()
 	params.exclude = [self]
@@ -725,10 +825,50 @@ func _try_mantle() -> Dictionary:
 		return {}
 	
 	var ledge_height_diff = ledge_hit.position.y - global_position.y
-	if ledge_height_diff > 0.12 or ledge_height_diff < -0.05:
+	if ledge_height_diff > height_tolerance or ledge_height_diff < -0.05:
 		return {}
 	
 	# confirm the landing spot is walkable
+	if ledge_hit.normal.y < 0.629:
+		return {}
+	
+	return { "position": ledge_hit.position }
+
+func _try_mantle_jump() -> Dictionary:
+	var space = get_world_3d().direct_space_state
+	var params = PhysicsRayQueryParameters3D.new()
+	params.exclude = [self]
+	params.collision_mask = 1
+	
+	var forward = camera_mount.global_transform.basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	
+	params.from = global_position
+	params.to = global_position + forward * (CLIMB_WALL_OFFSET + 0.1)
+	var wall_hit = space.intersect_ray(params)
+	
+	
+	if wall_hit.is_empty():
+		return {}
+	
+	
+	var ledge_top_origin = wall_hit.position + Vector3.UP * 0.25 + forward * 0.05
+	params.from = ledge_top_origin
+	params.to = ledge_top_origin + Vector3.DOWN * 0.25
+	var ledge_hit = space.intersect_ray(params)
+	
+	
+	if ledge_hit.is_empty():
+		return {}
+	
+
+	
+	var ledge_height_diff = ledge_hit.position.y - global_position.y
+	
+	if ledge_height_diff > 0.35 or ledge_height_diff < -0.05:
+		return {}
+	
 	if ledge_hit.normal.y < 0.629:
 		return {}
 	
@@ -805,13 +945,18 @@ func _update_throw(delta):
 
 	if held_player != null:
 		_update_held_player()
-
 	
 func _handle_falling(delta: float):
 	if not is_on_floor() and not is_climbing and not is_mantling:
 		if not is_falling:
 			is_falling = true
 			fall_start_y = global_position.y
+		else:
+			if just_jumped and pending_jump_mantle_timer <= 0.0:
+				var mantle = _try_mantle_jump()
+				if not mantle.is_empty():
+					pending_jump_mantle = mantle.position + Vector3.UP * MANTLE_DISTANCE
+					pending_jump_mantle_timer = 0.2
 	else:
 		if is_falling:
 			pre_impact_velocity = velocity
@@ -872,13 +1017,32 @@ func _update_anim_properties():
 	anim_tree.set("parameters/conditions/crouch", is_crouching)
 	anim_tree.set("parameters/conditions/uncrouch", !is_crouching)
 	
-	var state_crouch = _get_direction_state()
-	var all_states_crouch = ["crouchforward", "crouchback", "crouchleft", "crouchright"]
+	var state_crouch = _get_direction_state_crouch()
+	var all_states_crouch = ["crouchidle","crouchforward", "crouchback", "crouchleft", "crouchright"]
 	for c in all_states_crouch:
 		anim_tree.set("parameters/crouch/conditions/" + c, c == str(state_crouch))
 	
 	anim_tree.set("parameters/conditions/fell",!is_falling)
 	
+	anim_tree.set("parameters/conditions/mantle",is_mantling)
+	
+	anim_tree.set("parameters/conditions/climbing",is_climbing)
+	anim_tree.set("parameters/conditions/not_climbing",!is_climbing)
+	
+	
+	if wall_lunge_triggered:
+		anim_tree.set("parameters/climb/conditions/lounge",true)
+		wall_lunge_triggered = false
+	else:
+		anim_tree.set("parameters/climb/conditions/lounge",false)
+	
+	var climbing_state = _get_direction_climb()
+	var all_climb_crouch = ["vel_climb","novel_climb"]
+	for c in all_climb_crouch:
+		anim_tree.set("parameters/climb/conditions/" + c, c == str(climbing_state))
+	
+	anim_tree.set("parameters/climb/climb/TimeScale/scale",_get_climb_speed_modifier())
+
 	
 func _get_direction_state() -> String:
 	var local_velocity = global_transform.basis.inverse() * velocity
@@ -891,10 +1055,19 @@ func _get_direction_state() -> String:
 func _get_direction_state_crouch() -> String:
 	var local_velocity = global_transform.basis.inverse() * velocity
 	var flat = Vector2(local_velocity.x, local_velocity.z)
+	if flat.length() < 0.1:
+		return "crouchidle"
 	if abs(flat.y) > abs(flat.x):
 		return "crouchforward" if flat.y > 0 else "crouchback"
 	else:
 		return "crouchright" if flat.x > 0 else "crouchleft"
+
+func _get_direction_climb() -> String:
+	var local_velocity = global_transform.basis.inverse() * velocity
+	if local_velocity.length() > 0:
+		return "vel_climb"
+	else:
+		return "novel_climb"
 
 func _physics_process(delta: float) -> void:
 	_update_head_tilt(delta)
@@ -919,8 +1092,6 @@ func _physics_process(delta: float) -> void:
 			_update_throw(delta)
 		return
 	
-	
-	
 	#RAGDOLL
 	if is_ragdoll:
 		ragdoll_timer += delta
@@ -928,13 +1099,7 @@ func _physics_process(delta: float) -> void:
 		global_position = collision_ragdoll.global_position
 		rotation = collision_ragdoll.rotation
 		_update_camera_ragdoll(delta)
-		if is_ragdoll:
-			print("RAGDOLL | eye_dip: ", snappedf(ragdoll_eye_dip, 0.001),
-				  " | cam_y: ", snappedf(camera_mount.global_position.y, 0.001),
-				  " | smooth_y: ", snappedf(camera_smooth_pos.y, 0.001),
-				  " | rag_pos_y: ", snappedf(collision_ragdoll.global_position.y, 0.001))
-
-
+		
 		if ragdoll_timer >= RAGDOLL_MIN_DURATION:
 			if Vector2(spd.x, spd.z).length() < RAGDOLL_SETTLE_SPEED and abs(spd.y) < RAGDOLL_SETTLE_SPEED:
 				if ragdoll_recovery_timer < 0.0:
@@ -992,16 +1157,8 @@ func _physics_process(delta: float) -> void:
 	
 	
 	_handle_camera_mount_rotation(delta)
-
-	if is_recovering or recovery_linger:
-		print("RECOVERY | eye_h: ", snappedf(eye_height_current, 0.001),
-			  " | cam_y: ", snappedf(camera_mount.global_position.y, 0.001),
-			  " | target_y: ", snappedf(global_position.y + eye_height_current, 0.001),
-			  " | smooth_y: ", snappedf(camera_smooth_pos.y, 0.001),
-			  " | recovering: ", is_recovering,
-			  " | linger: ", recovery_linger,
-			  " | linger_t: ", snappedf(recovery_linger_timer, 0.01))
-
+	_update_mesh_rotation(delta)
+	
 	# Gravity
 	if not is_on_floor() and not is_climbing:
 		jump_grace_timer -= delta
@@ -1042,6 +1199,10 @@ func _physics_process(delta: float) -> void:
 		stamina_regen_timer = STAMINA_REGEN_DELAY
 		jump_grace_timer = 0.0
 		jump_buffer_timer = 0.0
+		var jump_mantle = _try_mantle_jump()
+		if not jump_mantle.is_empty():
+			pending_jump_mantle = jump_mantle.position + Vector3.UP * MANTLE_DISTANCE
+			pending_jump_mantle_timer = 0.2 # GIVING A JUMP TIME TO DEVELOP
 
 	# Movement
 	var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -1050,8 +1211,14 @@ func _physics_process(delta: float) -> void:
 	var direction = (transform.basis * Vector3(-move_input_smooth.x, 0, -move_input_smooth.y))
 	var forward = global_basis.z
 	var dot = direction.dot(forward)
-	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0.0 and is_on_floor() and dot > 0.5
+	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0.0 and is_on_floor() and dot > 0.5 and !is_crouching
 	var target_speed = SPRINT_SPEED if (is_sprinting or jumped_while_sprinting) else SPEED
+	if is_sprinting or jumped_while_sprinting:
+		target_speed = SPRINT_SPEED
+	elif is_crouching:
+		target_speed = CROUCH_SPEED
+	else:
+		target_speed = SPEED
 	speed_target = lerp(speed_target, target_speed, 14.0 * delta)
 
 	if is_sprinting:
@@ -1065,7 +1232,7 @@ func _physics_process(delta: float) -> void:
 	if is_crouching and wants_to_uncrouch:
 		if _can_uncrouch():
 			is_crouching = false
-	elif not is_crouching and Input.is_action_pressed("crouch") and not is_climbing:
+	elif not is_crouching and Input.is_action_pressed("crouch") and not is_climbing and not is_sprinting and not is_mantling:
 		is_crouching = true
 		if not was_crouching:
 			crouch_tilt_velocity -= 0.8
@@ -1096,31 +1263,61 @@ func _physics_process(delta: float) -> void:
 		var hit = _maintain_climb()
 		var climbing_input = Vector2(Input.get_axis("move_right", "move_left"), Input.get_axis("move_forward", "move_back"))
 		current_wall_normal = current_wall_normal.lerp(climb_wall_normal, 8.0 * delta)
-
 		var right_dir = current_wall_normal.cross(Vector3.UP).normalized()
 		var up_dir = right_dir.cross(current_wall_normal).normalized()
-
+		
+		if wall_lunge_cooldown_timer > 0.0:
+			wall_lunge_cooldown_timer -= delta
+		# WALL LUNGE (sprint impulse, climb continues)
+		if Input.is_action_just_pressed("sprint") and wall_lunge_cooldown_timer <= 0.0 and stamina >= WALL_LUNGE_STAMINA_COST and climbing_input.length() > 0.1:
+			var lunge_dir = (right_dir * climbing_input.x + up_dir * -climbing_input.y).normalized()
+			wall_lunge_boost = lunge_dir * WALL_LUNGE_IMPULSE
+			wall_lunge_cooldown_timer = WALL_LUNGE_COOLDOWN
+			stamina = max(stamina - WALL_LUNGE_STAMINA_COST, 0.0)
+			stamina_regen_timer = STAMINA_REGEN_DELAY
+			wall_lunge_triggered = true
+		
 		if not hit.is_empty():
 			var desired_pos = hit.position + current_wall_normal * CLIMB_WALL_OFFSET
 			desired_pos.y = global_position.y
-
-		velocity.x = (right_dir.x * climbing_input.x + up_dir.x * -climbing_input.y) * climb_speed
-		velocity.y = (right_dir.y * climbing_input.x + up_dir.y * -climbing_input.y) * climb_speed
-		velocity.z = (right_dir.z * climbing_input.x + up_dir.z * -climbing_input.y) * climb_speed
 		
-		velocity.y += climb_attach_boost
-		climb_attach_boost = lerp(climb_attach_boost, 0.0, CLIMB_ATTACH_BOOST_DECAY * delta)
-
-		if wall_nudge_timer > 0.0:
-			wall_nudge_timer -= delta
-			velocity += wall_nudge_dir * WALL_NUDGE_STRENGTH
+		var effective_climb_speed = climb_speed * _get_climb_speed_modifier()
 
 		if stamina > 0.0:
-			stamina = max(stamina - STAMINA_CLIMB_COST * delta, 0.0)
+			velocity.x = (right_dir.x * climbing_input.x + up_dir.x * -climbing_input.y) * effective_climb_speed
+			velocity.y = (right_dir.y * climbing_input.x + up_dir.y * -climbing_input.y) * effective_climb_speed
+			velocity.z = (right_dir.z * climbing_input.x + up_dir.z * -climbing_input.y) * effective_climb_speed
+			
+			velocity += wall_lunge_boost
+			velocity.y += climb_attach_boost
+
+			if wall_nudge_timer > 0.0:
+				wall_nudge_timer -= delta
+				velocity += wall_nudge_dir * WALL_NUDGE_STRENGTH
+
+			stamina = max(stamina - STAMINA_CLIMB_COST * _get_climb_stamina_drain_modifier() * delta, 0.0)
 			stamina_regen_timer = STAMINA_REGEN_DELAY
 		else:
-			_stop_climb()
-			velocity.y = -2.0
+			# Out of stamina: claw at the wall, then lose grip entirely
+			is_hanging = true
+			is_climb_attaching = false
+			
+			velocity.x = 0
+			velocity.y = 0
+			velocity.z = 0
+			
+			var drain_rate = _get_hanging_drain_rate(current_wall_normal)
+			hanging = max(hanging - drain_rate * delta, 0.0)
+
+			if hanging <= 0.0:
+				is_hanging = false
+				if not is_falling:
+					is_falling = true
+					fall_start_y = global_position.y
+				_stop_climb()
+
+		wall_lunge_boost = wall_lunge_boost.lerp(Vector3.ZERO, WALL_LUNGE_DECAY * delta)
+		climb_attach_boost = lerp(climb_attach_boost, 0.0, CLIMB_ATTACH_BOOST_DECAY * delta)
 		
 		if not is_climb_attaching and not is_mantling and not is_on_floor():
 			if climbing_input.y < -0.3:  # player pushing up
@@ -1135,7 +1332,10 @@ func _physics_process(delta: float) -> void:
 					is_climb_attaching = false
 					climb_reacquire_timer = MANTLE_DURATION + 0.4  # outlast the mantle
 					_stop_climb()
-
+	
+	if is_hanging: 
+		direction = Vector3.ZERO
+	
 	var current_air_accel = SPRINT_AIR_ACCELERATION if jumped_while_sprinting else AIR_ACCELERATION
 	var target_accel = ACCELERATION if is_on_floor() else current_air_accel
 	var target_decel = DECELERATION if is_on_floor() else AIR_FRICTION
@@ -1148,6 +1348,24 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = move_toward(velocity.x, 0, decel * delta)
 		velocity.z = move_toward(velocity.z, 0, decel * delta)
+	
+	# JUMPING MANTLES
+	if pending_jump_mantle != Vector3.ZERO and not is_mantling:
+		pending_jump_mantle_timer -= delta
+		if pending_jump_mantle_timer > 0.0:
+			pass  # wait
+		else:
+			var height_diff = pending_jump_mantle.y - global_position.y
+			if height_diff < 0.18:
+				mantle_target = pending_jump_mantle
+				mantle_camera_tilt_target = -0.12
+				mantle_camera_tilt = MANTLE_CAMERA_TILT
+				is_mantling = true
+				mantle_timer = MANTLE_DURATION
+				mantle_reacquire_timer = MANTLE_DURATION + 0.4
+				pending_jump_mantle = Vector3.ZERO
+			elif not is_on_floor() and velocity.y < -0.1:
+				pending_jump_mantle = Vector3.ZERO
 	
 	if is_mantling:
 		mantle_timer -= delta
@@ -1169,11 +1387,12 @@ func _physics_process(delta: float) -> void:
 		_update_camera_clip()
 		
 	_update_stamina(delta)
+	_update_hanging(delta)
 
 	# NEW CLIMBING
-	var manifold = _get_wall_manifold()
+	var manifold = _try_acquire_wall()
 
-	if manifold.hit:
+	if !manifold.is_empty() and stamina >= CLIMB_MIN_STAMINA_TO_ATTACH:
 		_set_cursor_active()
 	else:
 		if not is_climbing:
@@ -1183,7 +1402,7 @@ func _physics_process(delta: float) -> void:
 		if is_climbing:
 			_stop_climb()
 			
-	elif not is_climbing and climb_reacquire_timer <= 0.0 and not is_mantling and mantle_reacquire_timer <= 0.0:
+	elif not is_climbing and climb_reacquire_timer <= 0.0 and not is_mantling and mantle_reacquire_timer <= 0.0 and stamina >= CLIMB_MIN_STAMINA_TO_ATTACH:
 		var acquisition = _try_acquire_wall()
 		if not acquisition.is_empty():
 			climb_wall_normal = acquisition.normal

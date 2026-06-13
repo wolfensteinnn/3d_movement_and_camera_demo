@@ -99,6 +99,10 @@ crouch={
 3d/physics_engine="Jolt Physics"
 jolt_physics_3d/simulation/penetration_slop=0.03
 
+[rendering]
+
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
+
 [steam]
 
 initialization/app_id=0
