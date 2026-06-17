@@ -1,0 +1,37 @@
+[gd_scene format=3 uid="uid://bss06i4yjcmgn"]
+
+[ext_resource type="Script" uid="uid://bd5j8fgb33isp" path="res://interactable_bodies.gd" id="1_mvxmr"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_n1c64"]
+top_radius = 0.02
+bottom_radius = 0.02
+height = 0.04
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_j8ugh"]
+size = Vector3(0.04, 0.04, 0.04)
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_j6w08"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:linear_velocity")
+properties/2/spawn = true
+properties/2/replication_mode = 2
+properties/3/path = NodePath(".:angular_velocity")
+properties/3/spawn = true
+properties/3/replication_mode = 2
+
+[node name="RigidBody3D" type="RigidBody3D" unique_id=516273459]
+script = ExtResource("1_mvxmr")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1537541561]
+mesh = SubResource("CylinderMesh_n1c64")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=243255960]
+shape = SubResource("BoxShape3D_j8ugh")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1891561007]
+replication_config = SubResource("SceneReplicationConfig_j6w08")

@@ -4,6 +4,8 @@ extends CharacterBody3D
 @onready var meshes: Skeleton3D = $duck/Armature/Skeleton3D
 @onready var grab_cast: RayCast3D = $CameraMount/GrabCast
 @onready var hit_detector: Area3D = $HitDetector
+@onready var hold_point: Node3D = $CameraMount/HoldPoint
+
 
 var debug_velocity
 var test_projectile: RigidBody3D = null
@@ -241,6 +243,9 @@ var recovery_tilt_x: float = 0.0
 var recovery_tilt_z: float = 0.0
 var recovery_linger: bool = false
 var recovery_linger_timer: float = 0.0
+
+#MOVING OBJECTS
+var held_object: InteractableObject = null
 
 @onready var collision_normal: CollisionShape3D = $CollisionShape3D
 @onready var collision_crouch: CollisionShape3D = $CollisionShapeCrouch
@@ -527,7 +532,6 @@ func _on_hit(body: Node3D):
 		return
 	if is_ragdoll or body==self or is_falling:
 		return
-	print("hit by: ", body.name)
 	var hit_velocity := Vector3.ZERO
 	if body is RigidBody3D:
 		hit_velocity = body.linear_velocity
@@ -536,7 +540,6 @@ func _on_hit(body: Node3D):
 	elif body.get_parent() is RigidBody3D:
 		hit_velocity = body.get_parent().linear_velocity
 	if hit_velocity.length() < 2.0:
-		print(hit_velocity, " ", test_projectile.linear_velocity)
 		return
 	_start_ragdoll(hit_velocity)
 
@@ -806,6 +809,23 @@ func _update_throw(delta):
 	if held_player != null:
 		_update_held_player()
 
+func _try_pickup_object():
+	grab_cast.force_raycast_update()
+	if grab_cast.is_colliding():
+		var target = grab_cast.get_collider()
+		if target is InteractableObject and not target.is_held:
+			held_object = target
+			held_object._do_grab(get_multiplayer_authority(), get_path())
+			held_object.rpc("request_grab", get_multiplayer_authority(), get_path())
+
+func _update_object_pickup(delta: float):
+	if Input.is_action_just_pressed("grab") and held_object == null:
+		_try_pickup_object()
+	if Input.is_action_just_released("grab") and held_object != null:
+		held_object._do_release()
+		held_object.rpc("request_release")
+		held_object = null
+
 	
 func _handle_falling(delta: float):
 	if not is_on_floor() and not is_climbing and not is_mantling:
@@ -905,6 +925,7 @@ func _physics_process(delta: float) -> void:
 		return
 	
 	_update_body_rotation(delta)
+	_update_object_pickup(delta)
 	
 	debug_velocity.text = (str(velocity.length()))
 	
