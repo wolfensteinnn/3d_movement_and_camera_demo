@@ -5,6 +5,8 @@ class_name Player
 @onready var meshes: Skeleton3D = $duck_wholebody_transform/duck/Armature/Skeleton3D
 @onready var grab_cast: RayCast3D = $CameraMount/GrabCast
 @onready var hit_detector: Area3D = $HitDetector
+@onready var hold_point: Node3D = $CameraMount/HoldPoint
+
 
 @onready var duck_mesh: Node3D = $duck_wholebody_transform
 
@@ -357,6 +359,9 @@ var recovery_tilt_x: float = 0.0
 var recovery_tilt_z: float = 0.0
 var recovery_linger: bool = false
 var recovery_linger_timer: float = 0.0
+
+#MOVING OBJECTS
+var held_object: InteractableObject = null
 
 @onready var collision_normal: CollisionShape3D = $CollisionShape3D
 @onready var collision_crouch: CollisionShape3D = $CollisionShapeCrouch
@@ -1208,6 +1213,24 @@ func _update_freefall_camera(delta: float) -> void:
 		fall_fov_bonus = lerp(fall_fov_bonus, 0.0, 8.0 * delta)
 		fall_drift_time = 0.0
 		return
+
+func _try_pickup_object():
+	grab_cast.force_raycast_update()
+	if grab_cast.is_colliding():
+		var target = grab_cast.get_collider()
+		if target is InteractableObject and not target.is_held:
+			held_object = target
+			held_object._do_grab(get_multiplayer_authority(), get_path())
+			held_object.rpc("request_grab", get_multiplayer_authority(), get_path())
+
+func _update_object_pickup(delta: float):
+	if Input.is_action_just_pressed("grab") and held_object == null:
+		_try_pickup_object()
+	if Input.is_action_just_released("grab") and held_object != null:
+		held_object._do_release()
+		held_object.rpc("request_release")
+		held_object = null
+
 	
 	var fallen = fall_start_y - global_position.y
 	var t = clamp((fallen - FALL_ONSET_DISTANCE) / (FALL_FULL_DISTANCE - FALL_ONSET_DISTANCE), 0.0, 1.0)
@@ -1372,6 +1395,7 @@ func _physics_process(delta: float) -> void:
 	
 	_handle_screen_fx(delta)
 	_update_body_rotation(delta)
+	_update_object_pickup(delta)
 	
 	debug_velocity.text = (str(velocity.length()))
 	
