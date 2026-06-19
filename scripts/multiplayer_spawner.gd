@@ -5,6 +5,7 @@ extends MultiplayerSpawner
 @onready var velocity_debug: Label = $"../velocityDebug"
 @export var player: PackedScene
 @onready var cursor: TextureRect = $"../Cursor"
+@onready var a_shader: ColorRect = $"../CanvasLayer/ColorRect"
 
 
 func _init() -> void:
@@ -18,7 +19,7 @@ func _spawn_custom(data: Variant) -> Node:
 	scene._set_stamina_bar(stamina_bar)
 	scene._set_hanging_bar(hanging_bar)
 	scene._set_cursor(cursor)
-	
+	scene._set_screen_fx(a_shader)
 	#ANY FUCNTION OR INIT OR SETUP
 
 	return scene
