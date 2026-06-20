@@ -400,6 +400,10 @@ var small_error_shake_value:float = 0.4
 var small_error_shake_cooldown:float = 0.0
 const SMALL_ERROR_SHAKE_COOLDOWN:float = 0.8
 
+# NETCODE
+@onready var tick_interpolator: TickInterpolator = $TickInterpolator
+
+
 
 func _update_head_tilt(delta: float) -> void:
 	var dead_zone = deg_to_rad(45.0)
@@ -504,8 +508,6 @@ func _ready() -> void:
 			#if any.name == "Legs" or any.name == "Legs_001":
 				#continue
 			any.cast_shadow = 3 #SETS THE SHADOW CAST ONLY MODE (SO THAT YOU CAN SEE YOUR OWN SHADOW
-			#any.set_layer_mask_value(1, false)
-			#any.set_layer_mask_value(2, true)
 		
 		hand_r.position = Vector3(0.0,0.0,0)
 		hand_l.position = Vector3(-0.0,0.0,0)
@@ -513,6 +515,9 @@ func _ready() -> void:
 		target_rotation_y = rotation.y
 		body_target_rotation_y = rotation.y
 		target_rotation_x = camera_mount.rotation.x
+	else:
+		tick_interpolator.enabled = true
+		tick_interpolator.enable_recording = true
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
@@ -657,6 +662,14 @@ func _launch_test_projectile():
 	test_projectile.global_position = spawn
 	test_projectile.linear_velocity = direction * 8.0
 
+@rpc("any_peer", "reliable","call_local")
+func _sync_start_ragdoll(impulse: Vector3 = Vector3.ZERO) -> void:
+	_start_ragdoll(impulse)
+
+@rpc("any_peer", "reliable", "call_local")
+func _sync_stop_ragdoll() -> void:
+	_stop_ragdoll()
+
 func _start_ragdoll(impulse: Vector3 = Vector3.ZERO) -> void:
 	landing_dip_rotation = 0
 	ragdoll_vignette = 1.12
@@ -691,6 +704,8 @@ func _start_ragdoll(impulse: Vector3 = Vector3.ZERO) -> void:
 	is_mantling = false
 	is_climb_attaching = false
 	climb_reacquire_timer = RAGDOLL_MIN_DURATION + RAGDOLL_RECOVERY_TIME + 0.2
+	
+	_notify_teleport_if_remote()
 
 func _stop_ragdoll() -> void:
 	is_falling = false
@@ -734,6 +749,8 @@ func _stop_ragdoll() -> void:
 	rotation = Vector3(0.0, ragdoll_yaw, 0.0)
 	
 	is_recovering = true
+	
+	_notify_teleport_if_remote()
 
 func _on_hit(body: Node3D):
 	if not is_multiplayer_authority():
@@ -749,7 +766,7 @@ func _on_hit(body: Node3D):
 		hit_velocity = body.get_parent().linear_velocity
 	if hit_velocity.length() < 2.0:
 		return
-	_start_ragdoll(hit_velocity)
+	rpc("_sync_start_ragdoll", hit_velocity)
 
 func _get_climb_speed_modifier() -> float:
 	var t = clamp(stamina / STAMINA_MAX, 0.0, 1.0)
@@ -1170,7 +1187,7 @@ func _update_held_player() -> void:
 	held_player.rpc_id(held_player.name.to_int(), "receive_hold_position", hold_position)
 	#held_player.rpc("_move_camera_on_held",held_player_original_authority)
 
-@rpc("any_peer", "unreliable")
+@rpc("any_peer", "unreliable_ordered")
 func receive_hold_position(pos: Vector3):
 	if is_held and is_multiplayer_authority():
 		hold_target_position = pos
@@ -1190,7 +1207,7 @@ func _throw_player() -> void:
 @rpc("any_peer", "reliable")
 func receive_throw(throw_velocity: Vector3) -> void:
 	if is_multiplayer_authority():
-		_start_ragdoll(throw_velocity)
+		rpc("_sync_start_ragdoll", throw_velocity)
 
 func _update_throw(delta):
 		
@@ -1257,7 +1274,7 @@ func _handle_falling(delta: float):
 			pre_impact_velocity = velocity
 			fall_distance = fall_start_y - global_position.y
 			if fall_distance > RAGDOLL_FALL_THRESHOLD:
-				_start_ragdoll()
+				rpc("_sync_start_ragdoll")
 				return
 		
 			var dip_strength = clamp(fall_distance / 1.5, 0.1, 4.8) #from 30% to 180% roughly
@@ -1425,7 +1442,7 @@ func _physics_process(delta: float) -> void:
 			if ragdoll_recovery_timer > 0.0:
 				ragdoll_recovery_timer -= delta
 				if ragdoll_recovery_timer <= 0.0:
-					_stop_ragdoll()
+					rpc("_sync_stop_ragdoll")
 		return
 	
 	_count_idle_time(delta)
@@ -2145,3 +2162,7 @@ func _spring(current: float, target: float, velocity: float, stiffness: float, d
 func _screen_shake(strength: float):
 	small_error_shake_cooldown = SMALL_ERROR_SHAKE_COOLDOWN
 	small_error_shake_value = 1.0
+
+func _notify_teleport_if_remote() -> void:
+	if !is_multiplayer_authority():
+		tick_interpolator.teleport()

@@ -36,7 +36,7 @@ func _physics_process(delta: float) -> void:
 
 	var spring_force = to_target * HOLD_FORCE
 	var damping_force = -linear_velocity * HOLD_DAMPING
-	apply_central_force((spring_force + damping_force) * mass)
+	apply_central_force((spring_force + damping_force))
 	angular_velocity = angular_velocity.lerp(Vector3.ZERO, 5.0 * delta)
 
 # In interactable_object.gd

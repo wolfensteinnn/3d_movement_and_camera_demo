@@ -28,8 +28,6 @@ bg_color = Color(0.6841989, 0.5039249, 0, 0.25882354)
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tefeu"]
 bg_color = Color(0.7705805, 0.55817187, 0.09930038, 0.6666667)
 
-[ext_resource type="PackedScene" uid="uid://bss06i4yjcmgn" path="res://rigid_body_3d.tscn" id="5_tbgi4"]
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sugp2"]
 bg_color = Color(0.14509805, 0.22352941, 0.03137255, 0.25882354)
 
@@ -1439,7 +1437,7 @@ collision_mask = 5
 size = Vector3(200, 10, 200)
 
 [node name="shiptest2 (3)" type="AnimatableBody3D" parent="." unique_id=219099097]
-transform = Transform3D(0.9997958, -0.020209506, 0, 0.020209506, 0.9997958, 0, 0, 0, 1, -10.012983, 0.35746264, 0)
+transform = Transform3D(0.99999684, -0.002513241, 0, 0.002513241, 0.99999684, 0, 0, 0, 1, -10.012983, 0.35746264, 0)
 script = ExtResource("6_tefeu")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="shiptest2 (3)" unique_id=1667866100]
@@ -1693,9 +1691,6 @@ skeleton = NodePath("")
 transform = Transform3D(0.85712963, 0, 0, 0, 0.85712963, 0, 0, 0, 0.85712963, 0, 0, 0)
 mesh = SubResource("ArrayMesh_63lxy")
 skeleton = NodePath("")
-
-[node name="RigidBody3D2" parent="." unique_id=516273459 instance=ExtResource("5_tbgi4")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.88194656, 0.93699944, -0.092342675)
 
 [connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]

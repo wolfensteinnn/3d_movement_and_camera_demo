@@ -50,6 +50,9 @@ func _setup_as_host() -> void:
 func _setup_as_client() -> void:
 	multiplayer.multiplayer_peer = peer
 
+#func _process(delta: float) -> void:
+	#print("tick: ", NetworkTime.tick, " time: ", NetworkTime.time)
+
 # -------------------------------------------------------
 # ENET
 # -------------------------------------------------------

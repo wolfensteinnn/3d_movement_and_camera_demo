@@ -1,0 +1,62 @@
+[gd_scene format=3 uid="uid://coe3btuaet8p2"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_y6exm"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:velocity")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+properties/3/path = NodePath(".:is_sprinting")
+properties/3/spawn = true
+properties/3/replication_mode = 1
+properties/4/path = NodePath(".:just_jumped")
+properties/4/spawn = true
+properties/4/replication_mode = 1
+properties/5/path = NodePath(".:is_falling")
+properties/5/spawn = true
+properties/5/replication_mode = 1
+properties/6/path = NodePath(".:is_crouching")
+properties/6/spawn = true
+properties/6/replication_mode = 1
+properties/7/path = NodePath(".:is_ragdoll")
+properties/7/spawn = true
+properties/7/replication_mode = 1
+properties/8/path = NodePath(".:jumped_while_sprinting")
+properties/8/spawn = true
+properties/8/replication_mode = 1
+properties/9/path = NodePath(".:body_target_rotation_y")
+properties/9/spawn = true
+properties/9/replication_mode = 1
+properties/10/path = NodePath(".:target_rotation_y")
+properties/10/spawn = true
+properties/10/replication_mode = 1
+properties/11/path = NodePath(".:target_rotation_x")
+properties/11/spawn = true
+properties/11/replication_mode = 1
+properties/12/path = NodePath(".:is_mantling")
+properties/12/spawn = true
+properties/12/replication_mode = 1
+properties/13/path = NodePath(".:is_climbing")
+properties/13/spawn = true
+properties/13/replication_mode = 1
+properties/14/path = NodePath(".:stamina")
+properties/14/spawn = true
+properties/14/replication_mode = 1
+properties/15/path = NodePath("duck_wholebody_transform:rotation:x")
+properties/15/spawn = true
+properties/15/replication_mode = 1
+properties/16/path = NodePath(".:climb_input_anim_cache")
+properties/16/spawn = true
+properties/16/replication_mode = 1
+properties/17/path = NodePath(".:is_hanging")
+properties/17/spawn = true
+properties/17/replication_mode = 1
+
+[node name="Node3D" type="Node3D" unique_id=184103151]
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=765037872]
+replication_config = SubResource("SceneReplicationConfig_y6exm")

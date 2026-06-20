@@ -25,6 +25,7 @@ properties/3/spawn = true
 properties/3/replication_mode = 2
 
 [node name="RigidBody3D" type="RigidBody3D" unique_id=516273459]
+continuous_cd = true
 script = ExtResource("1_mvxmr")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1537541561]
