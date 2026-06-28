@@ -12,6 +12,9 @@ var is_joining: bool = false
 @onready var line_edit: LineEdit = $LineEdit
 @onready var button_2: Button = $Button2
 @onready var multiplayer_spawner: MultiplayerSpawner = $MultiplayerSpawner
+@onready var bot_spawner: MultiplayerSpawner = $BotSpawner
+@onready var bot_spawn_button: Button = $Button3
+
 
 # -------------------------------------------------------
 # LIFECYCLE
@@ -122,8 +125,16 @@ func _remove_player(id: int) -> void:
 		return
 	get_node(str(id)).queue_free()
 
+func _spawn_npc():
+	if multiplayer.is_server():
+		var random_spawn = Vector3(0,1,0)
+		bot_spawner.spawn({'initial_transform': random_spawn })
+
 func _on_button_pressed() -> void:
 	host()
 
 func _on_button_2_pressed() -> void:
 	join(line_edit.text.to_int())
+
+func _on_button_3_pressed() -> void:
+	_spawn_npc()

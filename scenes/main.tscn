@@ -7,6 +7,8 @@
 [ext_resource type="Environment" uid="uid://cfk37fm4ah0d3" path="res://assets/test_env.tres" id="3_tbgi4"]
 [ext_resource type="Texture2D" uid="uid://b76hdw73n6r7g" path="res://CrossHair.png" id="4_jyhfs"]
 [ext_resource type="Script" uid="uid://dks72apgedhoq" path="res://scripts/ship.gd" id="6_tefeu"]
+[ext_resource type="Script" uid="uid://dfq535ln8x6qc" path="res://scripts/bot_spawner.gd" id="7_85g3d"]
+[ext_resource type="PackedScene" uid="uid://b07ffb2sgspw5" path="res://scenes/npc.tscn" id="8_85g3d"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_tipki"]
 shader = ExtResource("3_o6xl0")
@@ -1202,7 +1204,6 @@ shadow_mesh = SubResource("ArrayMesh_frlof")
 
 [node name="Node3D" type="Node3D" unique_id=1848200090]
 script = ExtResource("1_0wfyh")
-player_scene = ExtResource("1_o5qli")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=369745915]
 
@@ -1283,6 +1284,12 @@ _spawnable_scenes = PackedStringArray("uid://6jb3nmk336sq")
 spawn_path = NodePath("..")
 script = ExtResource("3_sugp2")
 player = ExtResource("1_o5qli")
+
+[node name="BotSpawner" type="MultiplayerSpawner" parent="." unique_id=1477742590]
+_spawnable_scenes = PackedStringArray("uid://b07ffb2sgspw5")
+spawn_path = NodePath("..")
+script = ExtResource("7_85g3d")
+npc = ExtResource("8_85g3d")
 
 [node name="HangingBar" type="ProgressBar" parent="." unique_id=1252190306]
 anchors_preset = -1
@@ -1692,5 +1699,16 @@ transform = Transform3D(0.85712963, 0, 0, 0, 0.85712963, 0, 0, 0, 0.85712963, 0,
 mesh = SubResource("ArrayMesh_63lxy")
 skeleton = NodePath("")
 
+[node name="Button3" type="Button" parent="." unique_id=1113683946]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -86.0
+offset_right = 86.0
+offset_bottom = 31.0
+grow_horizontal = 2
+text = "Spawn Bot"
+
 [connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]
+[connection signal="pressed" from="Button3" to="." method="_on_button_3_pressed"]

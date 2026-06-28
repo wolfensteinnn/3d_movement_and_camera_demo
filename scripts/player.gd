@@ -33,7 +33,6 @@ var eye_height_current: float = 0.111
 var cam_clip_target: Vector3 = Vector3.ZERO  # add with other vars
 var cam_clip_active: bool = false
 
-
 # CAMERA BOB
 const BOB_FREQUENCY = 20.6
 const BOB_AMPLITUDE_Y = 0.018
@@ -116,6 +115,23 @@ var is_sprinting: bool = false
 var jumped_while_sprinting: bool = false
 var just_jumped: bool = false
 var sprint_lean: float = 0.0
+
+# SLOPE MOVEMENT
+var slope_speed_modifier: float = 1.0        # read this in animation system
+var slope_steepness: float = 0.0             # 0 = flat, 1 = max uphill (read for anims)
+const SLOPE_SPEED_MIN = 0.32                 # how slow at max uphill angle
+const SLOPE_UPHILL_THRESHOLD = 0.08          # dot product before slowdown kicks in
+const SLOPE_MODIFIER_LERP = 8.0              # smoothing speed
+const SLOPE_SPRINT_BLOCK = 0.3               # steepness above which sprint is cut
+
+# SLOPE BOB
+const UPHILL_BOB_FREQUENCY = 7.0 
+const UPHILL_BOB_AMPLITUDE_Y = 0.013    
+const UPHILL_BOB_AMPLITUDE_X = 0.008 
+const UPHILL_BOB_THRESHOLD = 0.35       # slope_steepness above this triggers it
+const UPHILL_BOB_BLEND_SPEED = 9.0      # fast snap in/out
+var uphill_bob_blend: float = 0.0
+var uphill_bob_time: float = 0.0
 
 # MANTLING
 var is_mantling: bool = false
@@ -392,6 +408,15 @@ var current_eye_y: float = 0.0
 var idle_is_turning:bool = false
 var current_head_tilt: float = 0.0
 
+# BLINKING
+@onready var eyes: MeshInstance3D = $duck_wholebody_transform/duck/Armature/Skeleton3D/eyes
+var blink_timer: float = 0.0
+var blink_interval: float = 0.0
+var blink_value: float = 0.0
+var is_blinking: bool = false
+const BLINK_SPEED_CLOSE = 18.0
+const BLINK_SPEED_OPEN = 10.0
+
 # SCREEN FX
 var screen_fx_material: ShaderMaterial
 var ragdoll_vignette:float = 0.0
@@ -492,10 +517,35 @@ func _can_uncrouch() -> bool:
 	params.exclude = [self]
 	return space.intersect_ray(params).is_empty()
 
+func _reset_blink_timer() -> void:
+	blink_interval = randf_range(2.5, 4.8)
+	blink_timer = blink_interval
+
+func _update_blink(delta: float) -> void:
+	if is_ragdoll:
+		return
+	blink_timer -= delta
+	if blink_timer <= 0.0:
+		is_blinking = true
+
+	if is_blinking:
+		blink_value = lerp(blink_value, 1.0, BLINK_SPEED_CLOSE * delta)
+		if blink_value >= 0.98:
+			is_blinking = false
+			_reset_blink_timer()
+	else:
+		blink_value = lerp(blink_value, 0.0, BLINK_SPEED_OPEN * delta)
+
+	eyes.set_blend_shape_value(
+		eyes.find_blend_shape_by_name("EyesClose"),
+		blink_value
+	)
+
 func _ready() -> void:
 	camera_smooth_pos = global_position
 	velocity = Vector3.ZERO
 	if is_multiplayer_authority():
+		_reset_blink_timer()
 		#animation_player.play("run")
 		hit_detector.body_entered.connect(_on_hit)
 		global_position = initial_transform
@@ -661,6 +711,12 @@ func _launch_test_projectile():
 	var direction = (target - spawn).normalized()
 	test_projectile.global_position = spawn
 	test_projectile.linear_velocity = direction * 8.0
+
+func _close_eyes():
+	eyes.set_blend_shape_value(
+		eyes.find_blend_shape_by_name("EyesClose"),
+		1.0
+	)
 
 @rpc("any_peer", "reliable","call_local")
 func _sync_start_ragdoll(impulse: Vector3 = Vector3.ZERO) -> void:
@@ -1163,6 +1219,7 @@ func _try_grab() -> void:
 
 	if grab_cast.is_colliding():
 		var hold_target = grab_cast.get_collider()
+		print(hold_target)
 		if hold_target is CharacterBody3D and hold_target != self:
 			if hold_target.is_held:
 				rpc_id(hold_target.holder_authority, "force_release_held")
@@ -1359,7 +1416,10 @@ func _update_anim_properties():
 		anim_tree.set("parameters/climb/conditions/" + c, c == str(climbing_state))
 	
 	anim_tree.set("parameters/climb/climb/TimeScale/scale",_get_climb_speed_modifier())
-
+	
+	anim_tree.set("parameters/conditions/hardwalk", uphill_bob_blend > 0.5)
+	anim_tree.set("parameters/conditions/nohardwalk", uphill_bob_blend < 0.5)
+	
 	
 func _get_direction_state() -> String:
 	var local_velocity = global_transform.basis.inverse() * velocity
@@ -1399,12 +1459,40 @@ func _handle_screen_fx(delta):
 		screen_fx_material.set_shader_parameter("vignette_intensity", climb_shake_blend * 0.54 + ragdoll_vignette)
 		screen_fx_material.set_shader_parameter("shake_strength", climb_shake_blend * 0.06)
 		screen_fx_material.set_shader_parameter("fast_shake_intensity",small_error_shake_value)
-		
+
+func _update_slope_modifier(delta: float) -> void:
+	if not is_on_floor():
+		slope_speed_modifier = lerp(slope_speed_modifier, 1.0, SLOPE_MODIFIER_LERP * delta)
+		slope_steepness = lerp(slope_steepness, 0.0, SLOPE_MODIFIER_LERP * delta)
+		return
+
+	var floor_n = get_floor_normal()
+	var move_dir = Vector2(velocity.x, velocity.z)
+
+	if move_dir.length() < 0.01:
+		slope_speed_modifier = lerp(slope_speed_modifier, 1.0, SLOPE_MODIFIER_LERP * delta)
+		slope_steepness = lerp(slope_steepness, 0.0, SLOPE_MODIFIER_LERP * delta)
+		return
+
+	# Project floor normal onto horizontal move direction to get uphill component
+	var move_dir_3d = Vector3(move_dir.x, 0.0, move_dir.y).normalized()
+	var uphill_dot = -floor_n.dot(move_dir_3d)  # negative because normal points away from slope
+	# uphill_dot > 0 means moving uphill, < 0 means downhill
+
+	var uphill_t = clamp((uphill_dot - SLOPE_UPHILL_THRESHOLD) / (1.0 - SLOPE_UPHILL_THRESHOLD), 0.0, 1.0)
+	var target_modifier = lerp(1.0, SLOPE_SPEED_MIN, uphill_t)
+
+	slope_steepness = lerp(slope_steepness, uphill_t, SLOPE_MODIFIER_LERP * delta)
+	slope_speed_modifier = lerp(slope_speed_modifier, target_modifier, SLOPE_MODIFIER_LERP * delta)
+
 
 func _physics_process(delta: float) -> void:
 	_update_head_tilt(delta)
 	_update_eye_look(delta)
 	_update_anim_properties()
+	_update_blink(delta)
+	if is_ragdoll:
+		_close_eyes()
 	
 	if !is_multiplayer_authority():
 		return
@@ -1413,6 +1501,8 @@ func _physics_process(delta: float) -> void:
 	_handle_screen_fx(delta)
 	_update_body_rotation(delta)
 	_update_object_pickup(delta)
+	
+	_update_slope_modifier(delta)
 	
 	debug_velocity.text = (str(velocity.length()))
 	
@@ -1570,7 +1660,7 @@ func _physics_process(delta: float) -> void:
 	var direction = (transform.basis * Vector3(-move_input_smooth.x, 0, -move_input_smooth.y))
 	var forward = global_basis.z
 	var dot = direction.dot(forward)
-	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0.0 and is_on_floor() and dot > 0.5 and !is_crouching
+	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0.0 and is_on_floor() and dot > 0.5 and !is_crouching and slope_steepness < SLOPE_SPRINT_BLOCK
 	var target_speed = SPRINT_SPEED if (is_sprinting or jumped_while_sprinting) else SPEED
 	if is_sprinting or jumped_while_sprinting:
 		target_speed = SPRINT_SPEED
@@ -1578,7 +1668,7 @@ func _physics_process(delta: float) -> void:
 		target_speed = CROUCH_SPEED
 	else:
 		target_speed = SPEED
-	speed_target = lerp(speed_target, target_speed, 14.0 * delta)
+	speed_target = lerp(speed_target, target_speed * slope_speed_modifier, 14.0 * delta)
 
 	if is_sprinting:
 		stamina = max(stamina - STAMINA_SPRINT_COST * delta, 0.0)
@@ -2031,6 +2121,23 @@ func _update_bob(delta: float) -> void:
 		#
 		#bob_offset_y = sin(bob_time) * amp_y * speed_ratio
 		#bob_offset_x = sin(bob_time * 0.5) * amp_x * speed_ratio
+	var wants_uphill_bob = is_on_floor() and horizontal_speed > 0.1 and slope_steepness >= UPHILL_BOB_THRESHOLD
+	uphill_bob_blend = lerp(uphill_bob_blend, 1.0 if wants_uphill_bob else 0.0, UPHILL_BOB_BLEND_SPEED * delta)
+
+	if uphill_bob_blend > 0.001:
+		uphill_bob_time += delta * UPHILL_BOB_FREQUENCY * uphill_bob_blend
+		
+		var raw_y = sin(uphill_bob_time)
+		
+		# gentle sine, just slightly weighted low — no sharp shaping
+		var shaped_y = raw_y - 0.18   # bias downward without punchy curves
+		
+		var forward_nod = max(0.0, -raw_y) * 0.005   # softer lean, no pow spike
+		
+		bob_offset_y += shaped_y * UPHILL_BOB_AMPLITUDE_Y * uphill_bob_blend
+		bob_offset_x += sin(uphill_bob_time * 0.5) * UPHILL_BOB_AMPLITUDE_X * uphill_bob_blend
+		bob_offset_z -= forward_nod * uphill_bob_blend
+	
 	
 	var is_idle = idle_check and idle_timer > 1.8 and is_on_floor()
 	idle_bob_blend = lerp(idle_bob_blend, 1.0 if is_idle else 0.0, delta)
