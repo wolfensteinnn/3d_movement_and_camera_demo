@@ -1,0 +1,84 @@
+[gd_scene format=3 uid="uid://b5hmtpx52kpol"]
+
+[ext_resource type="Script" uid="uid://bip5p3w4qlt66" path="res://scripts/emote_wheel.gd" id="1_g0v7b"]
+[ext_resource type="Texture2D" uid="uid://bxhg6wk1a38jc" path="res://ui/emote_wheel_base.png" id="1_jve7v"]
+[ext_resource type="Shader" uid="uid://bgsofe5r3wvl6" path="res://shaders/texture_lerp.gdshader" id="2_u22bj"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_u7xhw"]
+shader = ExtResource("2_u22bj")
+shader_parameter/blend = 0.0
+
+[node name="UiEmoteWheel" type="Control" unique_id=1101980107]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_g0v7b")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=516025210]
+material = SubResource("ShaderMaterial_u7xhw")
+custom_minimum_size = Vector2(512, 512)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -256.0
+offset_top = -256.0
+offset_right = 256.0
+offset_bottom = 256.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("1_jve7v")
+expand_mode = 1
+
+[node name="Control" type="Control" parent="." unique_id=2011941942]
+anchors_preset = 0
+offset_left = -177.62166
+offset_top = -373.11218
+offset_right = 109.01994
+offset_bottom = -162.36673
+rotation = 0.9302605
+scale = Vector2(1, 0.9539685)
+mouse_filter = 1
+
+[node name="Control2" type="Control" parent="." unique_id=1942735882]
+anchors_preset = 0
+offset_left = 360.45334
+offset_top = -282.43332
+offset_right = 686.5426
+offset_bottom = -89.611176
+rotation = 2.2636921
+mouse_filter = 1
+
+[node name="Control3" type="Control" parent="." unique_id=1853025007]
+anchors_preset = 0
+offset_left = 307.73407
+offset_top = 248.91405
+offset_right = 580.69495
+offset_bottom = 428.49963
+rotation = 3.635521
+mouse_filter = 1
+
+[node name="Control5" type="Control" parent="." unique_id=1585609192]
+anchors_preset = 0
+offset_left = -86.21359
+offset_top = 132.71346
+offset_right = 254.99011
+offset_bottom = 291.00647
+rotation = 2.8640852
+mouse_filter = 1
+
+[node name="Control4" type="Control" parent="." unique_id=248491636]
+anchors_preset = 0
+offset_left = -75.2135
+offset_top = 127.71357
+offset_right = 74.7865
+offset_bottom = 305.0
+mouse_filter = 1

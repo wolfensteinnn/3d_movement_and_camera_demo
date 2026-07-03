@@ -277,7 +277,6 @@ func _am_i_sprinting() -> bool:
 	return false
 
 
-
 func _physics_process(delta: float) -> void:
 	_update_anim_properties()
 	_update_blink(delta)

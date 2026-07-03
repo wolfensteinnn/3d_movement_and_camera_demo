@@ -10,6 +10,11 @@ class_name Player
 
 @onready var duck_mesh: Node3D = $duck_wholebody_transform
 
+# WATER RELATED
+var clipmap_tile_size := 1.0 
+var previous_tile := Vector3i.MAX
+var water
+
 # MESH ROTATION (CLIMB/HANG)
 const MESH_ROTATION_LERP_SPEED = 6.0
 var mesh_target_basis: Basis = Basis.IDENTITY
@@ -20,6 +25,8 @@ var test_projectile: RigidBody3D = null
 #UI
 var stamina_bar
 var cursor
+var emote_wheel
+var inputs_blocked:bool = false
 
 # CAMERA GENERAL
 const CAMERA_ATTACH_SMOOTH_SPEED = 10.6
@@ -385,6 +392,9 @@ var held_object: InteractableObject = null
 @onready var collision_ragdoll: RigidBody3D = $Ragdoll
 
 # ANIMATIONS
+var emote_anim: String = "null"
+var emote_anim_grace = 0.0
+const EMOTE_ANIM_GRACE = 0.35
 @onready var anim_tree: AnimationTree = $duck_wholebody_transform/duck/AnimationTree
 
 #DEBUG
@@ -428,8 +438,6 @@ const SMALL_ERROR_SHAKE_COOLDOWN:float = 0.8
 # NETCODE
 @onready var tick_interpolator: TickInterpolator = $TickInterpolator
 
-
-
 func _update_head_tilt(delta: float) -> void:
 	var dead_zone = deg_to_rad(45.0)
 	var abs_raw = absf(target_rotation_x)
@@ -471,6 +479,12 @@ func _anim_to_run():
 func _is_climbable_normal(n: Vector3) -> bool:
 	return n.y < CLIMB_FLOOR_THRESHOLD and n.y > CLIMB_CEIL_THRESHOLD
 
+func _ui_setup(an_emote_wheel):
+	emote_wheel = an_emote_wheel
+
+func _set_water(a_water):
+	water = a_water
+
 func _set_cursor(a_cursor):
 	cursor = a_cursor
 
@@ -484,6 +498,14 @@ func _set_cursor_base():
 
 func _set_cursor_climb():
 	cursor.texture = preload("res://CrossHairClimb.png")
+
+func _hide_cursor():
+	if cursor.visible:
+		cursor.visible = false
+
+func _show_cursor():
+	if !cursor.visible:
+		cursor.visible = true
 
 func _set_stamina_bar(a_bar):
 	stamina_bar = a_bar
@@ -582,6 +604,27 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	
+	if is_multiplayer_authority():
+		if event.is_action_pressed("emotes") and !is_climbing and !is_falling and !is_ragdoll and !is_hanging and held_player == null:
+			_hide_cursor()
+			if !inputs_blocked:
+				inputs_blocked = true
+			emote_wheel._activate()
+		if event.is_action_released("emotes"):
+			_show_cursor()
+			if inputs_blocked:
+				inputs_blocked = false
+			emote_anim = emote_wheel._choose_and_close()
+			emote_anim_grace = 0.0
+		
+		if event.is_action_pressed("climb") and inputs_blocked:
+			_show_cursor()
+			if inputs_blocked:
+				inputs_blocked = false
+			emote_anim = emote_wheel._choose_and_close()
+			emote_anim_grace = 0.0
+	
+	
 	if event is InputEventMouseMotion:
 		if name.to_int() != multiplayer.get_unique_id():
 			return
@@ -596,6 +639,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if !is_multiplayer_authority():
 		return
 	
+	if inputs_blocked:
+		return
+	
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ESCAPE:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
@@ -605,12 +651,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			_launch_test_projectile()
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
+		
 	#if event is InputEventMouseMotion:
 		#target_rotation_y -= event.relative.x * MOUSE_SENSITIVITY
 		#target_rotation_x += event.relative.y * MOUSE_SENSITIVITY
 		#target_rotation_x = clamp(target_rotation_x, deg_to_rad(-75), deg_to_rad(75))
 
 	if event.is_action_pressed("jump"):
+		if emote_anim != "null" and emote_anim_grace > EMOTE_ANIM_GRACE:
+			emote_anim = "null"
 		jump_buffer_timer = JUMP_BUFFER_TIME
 
 func _update_stamina(delta: float) -> void:
@@ -1219,7 +1268,6 @@ func _try_grab() -> void:
 
 	if grab_cast.is_colliding():
 		var hold_target = grab_cast.get_collider()
-		print(hold_target)
 		if hold_target is CharacterBody3D and hold_target != self:
 			if hold_target.is_held:
 				rpc_id(hold_target.holder_authority, "force_release_held")
@@ -1267,7 +1315,7 @@ func receive_throw(throw_velocity: Vector3) -> void:
 		rpc("_sync_start_ragdoll", throw_velocity)
 
 func _update_throw(delta):
-		
+	
 	if Input.is_action_just_pressed("grab") and held_player == null:
 		_try_grab()
 
@@ -1420,6 +1468,19 @@ func _update_anim_properties():
 	anim_tree.set("parameters/conditions/hardwalk", uphill_bob_blend > 0.5)
 	anim_tree.set("parameters/conditions/nohardwalk", uphill_bob_blend < 0.5)
 	
+	if emote_anim != "null":
+		_disable_all_emotes()
+		anim_tree.set("parameters/conditions/emote_end",false)
+		anim_tree.set("parameters/conditions/"+str(emote_anim),true)
+	else:
+		_disable_all_emotes()
+		anim_tree.set("parameters/conditions/emote_end",true)
+		
+
+func _disable_all_emotes():
+	var emote_anims = ["no_anim", "point_anim", "facepalm", "sixseven", "like_anim"]
+	for i in emote_anims:
+		anim_tree.set("parameters/conditions/"+str(i), false)
 	
 func _get_direction_state() -> String:
 	var local_velocity = global_transform.basis.inverse() * velocity
@@ -1485,6 +1546,12 @@ func _update_slope_modifier(delta: float) -> void:
 	slope_steepness = lerp(slope_steepness, uphill_t, SLOPE_MODIFIER_LERP * delta)
 	slope_speed_modifier = lerp(slope_speed_modifier, target_modifier, SLOPE_MODIFIER_LERP * delta)
 
+func _handle_water_render(delta):
+	var tile = (Vector3(global_position.x, 0.0, global_position.z) / clipmap_tile_size).ceil()
+	if not tile.is_equal_approx(previous_tile):
+		water.global_position = tile * clipmap_tile_size
+		previous_tile = tile
+
 
 func _physics_process(delta: float) -> void:
 	_update_head_tilt(delta)
@@ -1497,6 +1564,7 @@ func _physics_process(delta: float) -> void:
 	if !is_multiplayer_authority():
 		return
 	
+	_handle_water_render(delta)
 	
 	_handle_screen_fx(delta)
 	_update_body_rotation(delta)
@@ -1512,7 +1580,7 @@ func _physics_process(delta: float) -> void:
 		global_position = global_position.lerp(hold_target_position, 8.0 * delta)
 		_handle_camera_mount_rotation(delta)
 		_update_bob(delta)
-		if held_player != null:
+		if held_player != null and !inputs_blocked:
 			_update_held_player()
 			_update_throw(delta)
 		return
@@ -1547,6 +1615,9 @@ func _physics_process(delta: float) -> void:
 	
 	if small_error_shake_cooldown > 0.0:
 		small_error_shake_cooldown -= delta
+	
+	if emote_anim_grace <= EMOTE_ANIM_GRACE:
+		emote_anim_grace += delta
 	
 	wall_lunge_fov_punch = lerp(wall_lunge_fov_punch, 0.0, WALL_LUNGE_FOV_DECAY * delta)
 
@@ -1655,6 +1726,13 @@ func _physics_process(delta: float) -> void:
 
 	# Movement
 	var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if inputs_blocked:
+		input = Vector2.ZERO
+	
+	if emote_anim != "null" and input != Vector2.ZERO and emote_anim_grace > EMOTE_ANIM_GRACE:
+		emote_anim = "null"
+		
+	
 	var input_lerp_speed = lerp(18.0, 12.0, input.length())
 	move_input_smooth = move_input_smooth.lerp(input, input_lerp_speed * delta)
 	var direction = (transform.basis * Vector3(-move_input_smooth.x, 0, -move_input_smooth.y))
@@ -1681,7 +1759,7 @@ func _physics_process(delta: float) -> void:
 	if is_crouching and wants_to_uncrouch:
 		if _can_uncrouch():
 			is_crouching = false
-	elif not is_crouching and Input.is_action_pressed("crouch") and not is_climbing and not is_sprinting and not is_mantling:
+	elif not is_crouching and Input.is_action_pressed("crouch") and not is_climbing and not is_sprinting and not is_mantling and not inputs_blocked:
 		is_crouching = true
 		if not was_crouching:
 			crouch_tilt_velocity -= 0.8
@@ -1788,8 +1866,6 @@ func _physics_process(delta: float) -> void:
 			var masked_input = climbing_input
 			if not has_wall_below:
 				masked_input.y = min(masked_input.y, 0.0)
-			
-			
 			
 			var target_vel = Vector3(
 				(right_dir.x * climbing_input.x + up_dir.x * -masked_input.y) * effective_climb_speed,
@@ -2273,3 +2349,7 @@ func _screen_shake(strength: float):
 func _notify_teleport_if_remote() -> void:
 	if !is_multiplayer_authority():
 		tick_interpolator.teleport()
+
+func _on_animation_tree_animation_finished(anim_name: StringName) -> void:
+	if anim_name == "facepalm":
+		emote_anim = "null"

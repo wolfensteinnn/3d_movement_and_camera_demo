@@ -21,6 +21,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+ImGuiRoot="*uid://dugmpnsxaagba"
 WindowTiler="*uid://cmqjajhjgffm1"
 NetworkSimulator="*uid://1y2ey1e6qjwr"
 NetworkTime="*uid://cnqdxyjptkfvp"
@@ -39,7 +40,7 @@ project/assembly_name="3DTOWERDEFENSE"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/anim_player_refactor/plugin.cfg", "res://addons/netfox.extras/plugin.cfg", "res://addons/netfox.internals/plugin.cfg", "res://addons/netfox/plugin.cfg")
+enabled=PackedStringArray("res://addons/anim_player_refactor/plugin.cfg", "res://addons/imgui-godot/plugin.cfg", "res://addons/netfox.extras/plugin.cfg", "res://addons/netfox.internals/plugin.cfg", "res://addons/netfox/plugin.cfg")
 
 [filesystem]
 
@@ -103,6 +104,11 @@ crouch={
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194326,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
 }
+emotes={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":84,"key_label":0,"unicode":116,"location":0,"echo":false,"script":null)
+]
+}
 
 [physics]
 
@@ -113,6 +119,29 @@ common/physics_interpolation=true
 [rendering]
 
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
+
+[shader_globals]
+
+normals={
+"type": "sampler2DArray",
+"value": ""
+}
+water_color={
+"type": "color",
+"value": Color(0.0100228, 0.0196066, 0.0272118, 1)
+}
+foam_color={
+"type": "color",
+"value": Color(0.49190503, 0.40644833, 0.34239164, 1)
+}
+num_cascades={
+"type": "uint",
+"value": 0
+}
+displacements={
+"type": "sampler2DArray",
+"value": "::ls8kq"
+}
 
 [steam]
 
