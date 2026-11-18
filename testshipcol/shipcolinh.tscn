@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://cyg8ql4gt6c4a"]
+
+[ext_resource type="PackedScene" uid="uid://c0tswx05052d6" path="res://shipcool/shiptest7.glb" id="1_30ix2"]
+
+[node name="Node3D" type="Node3D" unique_id=567250689]
+
+[node name="shiptest7" parent="." unique_id=1952283079 instance=ExtResource("1_30ix2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.2506189, 0)

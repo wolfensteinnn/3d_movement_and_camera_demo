@@ -116,7 +116,7 @@ func _on_lobby_joined(lobby_id: int, permissions: int, locked: bool, response: i
 # -------------------------------------------------------
 
 func _add_player(id: int = 1) -> void:
-	var random_spawn = Vector3(0,1,0)
+	var random_spawn = Vector3(0,0,0)
 	multiplayer_spawner.spawn({ 'peer_id': id, 'initial_transform': random_spawn })
 	
 	

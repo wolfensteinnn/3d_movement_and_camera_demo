@@ -10,6 +10,21 @@ class_name Player
 
 @onready var duck_mesh: Node3D = $duck_wholebody_transform
 
+# SHIP RELATED
+var current_platform: Node3D = null              # the AnimatableBody3D we're currently standing on, or null
+var was_on_platform: bool = false                 # last frame's state, so we can detect the leave-frame
+
+var platform_velocity: Vector3 = Vector3.ZERO     # linear velocity the platform is contributing to us right now
+var platform_angular_velocity: Vector3 = Vector3.ZERO  # copy of the platform's angular_velocity var
+
+var platform_local_offset: Vector3 = Vector3.ZERO # our position relative to the platform's origin (needed for angular contribution)
+
+var local_velocity: Vector3 = Vector3.ZERO        # velocity - platform_velocity — "how fast are we actually walking on deck"
+
+var platform_debug_enabled: bool = true
+var platform_debug_timer: float = 0.0
+const PLATFORM_DEBUG_INTERVAL = 0.5  # seconds between prints, so it doesn't flood the console
+
 # WATER RELATED
 var clipmap_tile_size := 1.0 
 var previous_tile := Vector3i.MAX
@@ -649,6 +664,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			global_position = Vector3(2.7,9,3)
 		if event.keycode == KEY_T:
 			_launch_test_projectile()
+	
+	if event is InputEventKey and event.is_pressed() and event.keycode == KEY_O:
+		Engine.time_scale = 3.0
+	else:
+		Engine.time_scale = 1.0
+	
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
 		
@@ -1552,6 +1573,58 @@ func _handle_water_render(delta):
 		water.global_position = tile * clipmap_tile_size
 		previous_tile = tile
 
+func _find_platform_below() -> ShipRoot:
+	if not is_on_floor():
+		return null
+
+	var space = get_world_3d().direct_space_state
+	var params = PhysicsRayQueryParameters3D.create(
+		global_position + Vector3.UP * 0.05,
+		global_position + Vector3.DOWN * 0.3
+	)
+	params.exclude = [self]
+	var hit = space.intersect_ray(params)
+
+	if hit.is_empty():
+		return null
+	if hit.collider is AnimatableBody3D and hit.collider.get_parent() is ShipRoot:
+		return hit.collider.get_parent()
+	return null
+
+func _update_platform_tracking(delta: float) -> void:
+	var found_ship: ShipRoot = _find_platform_below()
+	var found_offset: Vector3 = Vector3.ZERO
+	if found_ship != null:
+		found_offset = global_position - found_ship.global_position
+
+	var is_on_platform_now = found_ship != null
+
+	# ENTER
+	if is_on_platform_now and not was_on_platform:
+		current_platform = found_ship
+		platform_local_offset = found_offset
+
+	# STAYING ON IT
+	elif is_on_platform_now and was_on_platform:
+		platform_local_offset = found_offset
+
+	# EXIT — carry the momentum instead of dropping it
+	elif not is_on_platform_now and was_on_platform:
+		velocity += platform_velocity
+		current_platform = null
+
+	# refresh platform_velocity / angular from live ship data
+	if current_platform != null:
+		platform_angular_velocity = current_platform.angular_velocity
+		platform_velocity = current_platform.velocity + current_platform.angular_velocity.cross(platform_local_offset)
+	else:
+		platform_velocity = Vector3.ZERO
+		platform_angular_velocity = Vector3.ZERO
+
+	local_velocity = velocity - platform_velocity
+	
+	was_on_platform = is_on_platform_now
+
 
 func _physics_process(delta: float) -> void:
 	_update_head_tilt(delta)
@@ -1973,6 +2046,18 @@ func _physics_process(delta: float) -> void:
 	_update_bob(delta)
 	_update_camera_clip()
 	move_and_slide()
+	if current_platform != null and platform_debug_enabled:
+		platform_debug_timer -= delta
+		if platform_debug_timer <= 0.0:
+			platform_debug_timer = PLATFORM_DEBUG_INTERVAL
+			print("--- PLATFORM DEBUG ---")
+			print("ship.velocity: ", current_platform.velocity)
+			print("player velocity (raw): ", velocity)
+			print("platform_velocity (computed): ", platform_velocity)
+			print("local_velocity (should be near 0 if standing still): ", local_velocity)
+			print("is_on_floor: ", is_on_floor())
+			print("built-in platform velocity: ", get_platform_velocity())
+	_update_platform_tracking(delta)
 	
 	if is_climbing:
 		_maintain_climb_depth()
@@ -2175,6 +2260,15 @@ func _update_bob(delta: float) -> void:
 	var bob_offset_y = 0.0
 	var bob_offset_x = 0.0
 	var bob_offset_z = 0.0
+	
+	if current_platform != null:
+		platform_angular_velocity = current_platform.angular_velocity
+		platform_velocity = current_platform.velocity + current_platform.angular_velocity.cross(platform_local_offset)
+		
+		camera_smooth_pos += platform_velocity * delta
+	else:
+		platform_velocity = Vector3.ZERO
+		platform_angular_velocity = Vector3.ZERO
 	
 	if horizontal_speed > 0.1 and is_on_floor():
 		var is_sprint_bob = is_sprinting or jumped_while_sprinting

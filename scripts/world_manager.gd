@@ -6,7 +6,7 @@ extends Node
 
 func _ready() -> void:
 	wave_manager.set_shore_factor(0)
-	wave_manager.set_state(&"serious_storm")
+	wave_manager.set_state(&"super_calm")
 	wave_manager.set_wind_direction(15)
 
 
