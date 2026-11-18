@@ -51,8 +51,8 @@ adjustment_contrast = 1.07
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_gqmmt"]
 shader = ExtResource("3_o6xl0")
 shader_parameter/aberration = 0.0
-shader_parameter/vignette_radius = 0.22
-shader_parameter/vignette_softness = 0.38
+shader_parameter/vignette_radius = 0.42000001995
+shader_parameter/vignette_softness = 0.8070000383325
 shader_parameter/vignette_intensity = 0.0
 shader_parameter/vignette_contrast = 2.2
 shader_parameter/vignette_color = Color(0, 0, 0, 1)
@@ -62,7 +62,7 @@ shader_parameter/shake_factor_b = Vector2(1, 1)
 shader_parameter/shake_magnitude = Vector2(0.004, 0.004)
 shader_parameter/fast_shake_intensity = 0.0
 shader_parameter/u_dither_mode = 3
-shader_parameter/u_dither_level = 10
+shader_parameter/u_dither_level = 0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tbgi4"]
 bg_color = Color(0.6841989, 0.5039249, 0, 0.25882354)
@@ -123,6 +123,8 @@ shader_parameter/dissolve_texture = SubResource("NoiseTexture2D_tsx6q")
 density = 8.0
 height_falloff = 0.176
 edge_fade = 1.75
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0ld40"]
 
 [node name="Node3D" type="Node3D" unique_id=1848200090]
 script = ExtResource("1_0wfyh")
@@ -240,6 +242,7 @@ grow_horizontal = 2
 text = "Spawn Bot"
 
 [node name="Water" type="MeshInstance3D" parent="." unique_id=356974835]
+visible = false
 sorting_offset = 999.0
 material_override = ExtResource("10_jbj1t")
 cast_shadow = 0
@@ -264,6 +267,7 @@ material = SubResource("FogMaterial_gqmmt")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=699120385]
 transform = Transform3D(0.945601, -0.0516921, 0.321197, -0.00840572, 0.983084, 0.18296, -0.325221, -0.175707, 0.929171, 0, 10, 0)
+shadow_enabled = true
 shadow_bias = 0.167
 shadow_normal_bias = 6.047
 shadow_opacity = 0.79
@@ -279,10 +283,44 @@ grow_horizontal = 0
 text = "Rogue Wave"
 
 [node name="Node3D" parent="." unique_id=347479473 instance=ExtResource("10_choun")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.7856927, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.455746, -1.7856927, 0)
 
 [node name="CSGCylinder3D" type="CSGCylinder3D" parent="." unique_id=448705565]
-transform = Transform3D(5.5938087, 0, 0, 0, 5.131525, 0, 0, 0, 1, 0, 0, 78.6969)
+transform = Transform3D(5.5938087, 0, 0, 0, 5.131525, 0, 0, 0, 1, 0, 0, 5.816906)
+use_collision = true
+collision_mask = 15
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=64855568]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -15.81632, 0)
+use_collision = true
+collision_layer = 15
+collision_mask = 15
+size = Vector3(200, 29.02246, 200)
+material = SubResource("StandardMaterial3D_0ld40")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="." unique_id=2128932229]
+transform = Transform3D(0.97169363, -1.4296081, 0, 0.23624462, 5.8800964, 0, 0, 0, 1, 5.463749, 0.23848057, 0)
+use_collision = true
+collision_layer = 15
+collision_mask = 15
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="." unique_id=183368339]
+transform = Transform3D(0.9992548, 0.23356616, 0, -0.038597107, 6.04688, 0, 0, 0, 1, 0.5479622, -3.1330748, 0)
+use_collision = true
+collision_layer = 15
+collision_mask = 15
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="." unique_id=1601545751]
+transform = Transform3D(0.9992548, 0.23356616, 0, -0.038597107, 6.04688, 0, 0, 0, 1, 0.5297597, -3.6043253, -2.3891973)
+use_collision = true
+collision_layer = 15
+collision_mask = 15
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="." unique_id=1837259814]
+transform = Transform3D(0.9672101, 1.5369163, 0, -0.25397742, 5.852965, 0, 0, 0, 1, 2.615069, -2.379686, -2.3891973)
+use_collision = true
+collision_layer = 15
+collision_mask = 15
 
 [connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="Button2" to="." method="_on_button_2_pressed"]
